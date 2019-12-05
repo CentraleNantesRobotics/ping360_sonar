@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 COMMON_ACK = 1
 COMMON_NACK = 2
 COMMON_ASCII_TEXT = 3

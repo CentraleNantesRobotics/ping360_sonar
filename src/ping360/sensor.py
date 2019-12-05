@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # ping360.py
 # A device API for the Blue Robotics Ping360 scanning sonar
