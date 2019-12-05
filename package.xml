@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>ros-ping360-sonar</name>
+  <name>ping360_sonar</name>
   <version>0.0.0</version>
   <description>The sonar-ping360 package</description>
 

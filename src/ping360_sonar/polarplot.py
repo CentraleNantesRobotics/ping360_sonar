@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import roslib
-roslib.load_manifest('ros-ping360-sonar')
+roslib.load_manifest('ping360_sonar')
 
 from sensor import Ping360
 import argparse
@@ -19,26 +19,32 @@ def main():
      parser.add_argument('--device', action="store", required=True, type=str, help="Ping device port.")
      parser.add_argument('--baudrate', action="store", type=int, default=2000000, help="Ping device baudrate.")
      parser.add_argument('--v', action="store", type=bool, default=False, help="Verbose")
-     parser.add_argument('--size', action="store", type=int, default=200, help="Length")
+     parser.add_argument('--size', action="store", type=int, default=200, help="Image Size")
 
      args = parser.parse_args()
      try:
           rospy.init_node('ping360_node')
-          p = Ping360(args.device, args.baudrate)
-          bridge = CvBridge()
-          imagePub = rospy.Publisher('ping360_sonar', Image, queue_size=1)
-          print("Initialized: %s" % p.initialize())
-          if args.v:
-               print('Verbose Mode')
-          print(p.set_transmit_frequency(1000))
-          print(p.set_sample_period(80))
-          print(p.set_number_of_samples(200))
-
-          max_range = 80*200*1450/2
+          transmitFrequency = 1000
+          samplePeriod = 80
+          numberOfSample = 200
+          speedOfSound = 1450
+          length = args.size 
           step = 1
-          length = args.size
-          image = np.zeros((length, length, 1), np.uint8)
           angle = 0
+          topic = "ping360_sonar"
+          queue_size= 1
+
+          p = Ping360(args.device, args.baudrate)
+          imagePub = rospy.Publisher(topic, Image, queue_size=queue_size)
+          bridge = CvBridge()
+
+          print("Initialized: %s" % p.initialize())
+          p.set_transmit_frequency(transmitFrequency)
+          p.set_sample_period(samplePeriod)
+          p.set_number_of_samples(numberOfSample)
+
+          max_range = samplePeriod * numberOfSample * speedOfSound / 2
+          image = np.zeros((length, length, 1), np.uint8)
           center = (float(length/2),float(length/2))
           while not rospy.is_shutdown():
                p.transmitAngle(angle)
@@ -54,12 +60,9 @@ def main():
                          theta = 2*pi*(angle+k)/400.0
                          x = float(i)*cos(theta)
                          y = float(i)*sin(theta)
-                         #print(x,y,theta)
                          image[int(center[0]+x)][int(center[1]+y)][0] = pointColor
 
                angle = (angle + step) % 400
-               #color = cv2.applyColorMap(image,cv2.COLORMAP_JET)
-               #image = color
                if args.v:
                     cv2.imshow("PolarPlot",image)
                     cv2.waitKey(27)
