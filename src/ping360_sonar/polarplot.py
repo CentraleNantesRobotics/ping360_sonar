@@ -65,17 +65,20 @@ def main():
                data = bytearray(getattr(p,'_data'))
                data_lst = [k for k in data]
                linear_factor = float(len(data_lst)) / float(center[0]) #TODO: this should probably be range/pixelsize
-               for i in range(int(center[0])): #TODO: check the update polar logic on ping-viewer
-                    if(i < center[0]):
-                         pointColor = data_lst[int(i*linear_factor-1)]
-                    else:
-                         pointColor = 0
-                    for k in np.linspace(0,step,8*step):
-                         theta = 2*pi*(angle+k)/400.0
-                         x = float(i)*cos(theta)
-                         y = float(i)*sin(theta)
-                         image[int(center[0]+x)][int(center[1]+y)][0] = pointColor
-
+               try:
+                    for i in range(int(center[0])): #TODO: check the update polar logic on ping-viewer
+                         if(i < center[0]):
+                              pointColor = data_lst[int(i*linear_factor-1)]
+                         else:
+                              pointColor = 0
+                         for k in np.linspace(0,step,8*step):
+                              theta = 2*pi*(angle+k)/400.0
+                              x = float(i)*cos(theta)
+                              y = float(i)*sin(theta)
+                              image[int(center[0]+x)][int(center[1]+y)][0] = pointColor
+               except IndexError:
+                    continue
+               
                angle = (angle + step) % 400
                if args.v:
                     cv2.imshow("PolarPlot",image)
