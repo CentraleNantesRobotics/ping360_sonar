@@ -14,36 +14,30 @@ from cv_bridge import CvBridge, CvBridgeError
 import rospy
 
 def main():
-     parser = argparse.ArgumentParser(description="Ping python library example.")
-     parser.add_argument('--device', action="store", required=True, type=str, help="Ping device port.")
-     parser.add_argument('--baudrate', action="store", type=int, default=2000000, help="Ping device baudrate.")
-     parser.add_argument('--v', action="store", type=bool, default=False, help="Verbose")
-     parser.add_argument('--size', action="store", type=int, default=200, help="Image Size")
-
-     args = parser.parse_args()
      try:
           rospy.init_node('ping360_node')
           
           # Ping 360 Parameters
-          device = "/dev/ttyUSB0"
-          baudrate = 115200
-          gain = 0
-          numberOfSamples = 200 # Number of points
-          transmitFrequency = 740 # Default frequency
-          sonarRange = 1 # in m
-          speedOfSound = 1500 # in m/s
+          device = rospy.get_param('~device',"/dev/ttyUSB0")
+          baudrate = rospy.get_param('~baudrate', 115200)
+          gain = rospy.get_param('~gain', 0)
+          numberOfSamples = rospy.get_param('~numberOfSamples', 200) # Number of points
+          transmitFrequency = rospy.get_param('~transmitFrequency', 740) # Default frequency
+          sonarRange = rospy.get_param('~sonarRange', 1) # in m
+          speedOfSound = rospy.get_param('~speedOfSound', 1500) # in m/s
           samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
           transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
+          debug = rospy.get_param('~debug', True)
 
           # Output and ROS parameters
-          step = 1
+          step = rospy.get_param('~step', 1)
           topic = "ping360_sonar"
-          imgSize = args.size
-          queue_size= 1
+          imgSize = rospy.get_param('~imgSize', 500)
+          queue_size= rospy.get_param('~queueSize', 1)
 
           # Global Variables
           angle = 0
-          p = Ping360(args.device, args.baudrate)
+          p = Ping360(device, baudrate)
           imagePub = rospy.Publisher(topic, Image, queue_size=queue_size)
           bridge = CvBridge()
 
@@ -80,7 +74,7 @@ def main():
                     continue
                
                angle = (angle + step) % 400
-               if args.v:
+               if debug:
                     cv2.imshow("PolarPlot",image)
                     cv2.waitKey(27)
                publish(image, imagePub, bridge)
