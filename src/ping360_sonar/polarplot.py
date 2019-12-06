@@ -28,10 +28,10 @@ def main():
           device = "/dev/ttyUSB0"
           baudrate = 115200
           gain = 0
-          numberOfSamples = 1200 # Numbre of points
+          numberOfSamples = 200 # Number of points
           transmitFrequency = 740 # Default frequency
-          sonarRange = 30 # in m
-          speedOfSound = 1500 # in km/h ?
+          sonarRange = 1 # in m
+          speedOfSound = 1500 # in m/s
           samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
           transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
 
@@ -95,13 +95,15 @@ def publish(image, imagePub, bridge):
 
 # https://discuss.bluerobotics.com/t/please-provide-some-answer-regards-ping360/6393/3?u=stormix
 
-def calculateSamplePeriod(distance: int, numberOfSamples: int, speedOfSound: int, _samplePeriodTickDuration = 25e-9) -> float:
+def calculateSamplePeriod(distance, numberOfSamples, speedOfSound, _samplePeriodTickDuration = 25e-9):
+     # type: (float, int, int, float) -> float
      """
       Calculate the sample period based in the new range
      """
      return 2*distance/(numberOfSamples*speedOfSound*_samplePeriodTickDuration)
 
-def adjustTransmitDuration(distance: int, samplePeriod: float, speedOfSound: int, _firmwareMinTransmitDuration = 5) -> float:
+def adjustTransmitDuration(distance, samplePeriod, speedOfSound, _firmwareMinTransmitDuration = 5):
+     # type: (float, float, int, int) -> float
      """
      @brief Adjust the transmit duration for a specific range
      Per firmware engineer:
@@ -115,19 +117,21 @@ def adjustTransmitDuration(distance: int, samplePeriod: float, speedOfSound: int
      # 1
      duration = 8000 * distance / speedOfSound
      # 2 (transmit duration is microseconds, samplePeriod() is nanoseconds)
-     transmit_duration = max(2.5*samplePeriod()/1000, duration)
+     transmit_duration = max(2.5*getSamplePeriod(samplePeriod)/1000, duration)
      # 3
      return max(_firmwareMinTransmitDuration, min(transmitDurationMax(samplePeriod), transmit_duration))
 
-def transmitDurationMax(samplePeriod: float, _firmwareMaxTransmitDuration = 500) -> float:
+def transmitDurationMax(samplePeriod, _firmwareMaxTransmitDuration = 500):
+     # type: (float, int) -> float
      """
      @brief The maximum transmit duration that will be applied is limited internally by the
      firmware to prevent damage to the hardware
      The maximum transmit duration is equal to 64 * the sample period in microseconds
      @return The maximum transmit duration possible
      """
-     return min(_firmwareMaxTransmitDuration, samplePeriod(samplePeriod) * 64e6)
+     return min(_firmwareMaxTransmitDuration, getSamplePeriod(samplePeriod) * 64e6)
 
-def samplePeriod(samplePeriod: float, _samplePeriodTickDuration = 25e-9) -> float:
+def getSamplePeriod(samplePeriod, _samplePeriodTickDuration = 25e-9):
+     # type: (float, float) -> float
      """  Sample period in ns """
      return samplePeriod*_samplePeriodTickDuration
