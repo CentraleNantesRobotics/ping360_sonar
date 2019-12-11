@@ -83,6 +83,8 @@ def main():
                if debug:
                     cv2.imshow("PolarPlot",image)
                     cv2.waitKey(27)
+               else:
+                    cv2.destroyAllWindows()
                publish(image, imagePub, bridge)
                rospy.sleep(0.1)
      
