@@ -12,6 +12,14 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import rospy
+from dynamic_reconfigure.server import Server
+from ping360_sonar.cfg import sonarConfig
+
+
+def callback(config, level):
+     print(config)
+     #     rospy.loginfo("""Reconfigure Request: {int_param}, {double_param}, {str_param}, {bool_param}, {size}""".format(**config))
+     return config
 
 def main():
      try:
@@ -28,6 +36,7 @@ def main():
           samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
           transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
           debug = rospy.get_param('~debug', True)
+          # srv = Server(sonarConfig, callback)
 
           # Output and ROS parameters
           step = rospy.get_param('~step', 1)
@@ -79,6 +88,7 @@ def main():
                     cv2.waitKey(27)
                publish(image, imagePub, bridge)
                rospy.sleep(0.1)
+               rospy.spin()
      
      except KeyboardInterrupt:
           print("Shutting down")
