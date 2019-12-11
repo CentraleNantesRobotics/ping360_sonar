@@ -14,44 +14,36 @@ from cv_bridge import CvBridge, CvBridgeError
 import rospy
 from dynamic_reconfigure.server import Server
 from ping360_sonar.cfg import sonarConfig
-
+import json 
 
 def callback(config, level):
-     print(config)
-     #     rospy.loginfo("""Reconfigure Request: {int_param}, {double_param}, {str_param}, {bool_param}, {size}""".format(**config))
+     global gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, p
+     # Update Ping 360 Parameters
+     gain = config['gain']
+     numberOfSamples = config['numberOfSamples']
+     transmitFrequency = config['transmitFrequency']
+     sonarRange = config['range']
+     speedOfSound = config['speedOfSound']
+     samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
+     transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
+     debug = config['debug']
+     step = config['step']
+     queue_size = config['queueSize']
+     rospy.loginfo("Reconfigure Request")
      return config
+
 
 def main():
      try:
           rospy.init_node('ping360_node')
-          
-          # Ping 360 Parameters
-          device = rospy.get_param('~device',"/dev/ttyUSB0")
-          baudrate = rospy.get_param('~baudrate', 115200)
-          gain = rospy.get_param('~gain', 0)
-          numberOfSamples = rospy.get_param('~numberOfSamples', 200) # Number of points
-          transmitFrequency = rospy.get_param('~transmitFrequency', 740) # Default frequency
-          sonarRange = rospy.get_param('~sonarRange', 1) # in m
-          speedOfSound = rospy.get_param('~speedOfSound', 1500) # in m/s
-          samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
-          transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
-          debug = rospy.get_param('~debug', True)
-          # srv = Server(sonarConfig, callback)
-
-          # Output and ROS parameters
-          step = rospy.get_param('~step', 1)
-          topic = "ping360_sonar"
-          imgSize = rospy.get_param('~imgSize', 500)
-          queue_size= rospy.get_param('~queueSize', 1)
+          srv = Server(sonarConfig, callback)
 
           # Global Variables
           angle = 0
-          p = Ping360(device, baudrate)
-          imagePub = rospy.Publisher(topic, Image, queue_size=queue_size)
+          imagePub = rospy.Publisher("ping360_sonar", Image, queue_size=queue_size)
           bridge = CvBridge()
 
           # Initialize and configure the sonar
-          print("Initialized: %s" % p.initialize())
           p.set_gain_setting(gain)
           p.set_transmit_frequency(transmitFrequency)
           p.set_transmit_duration(transmitDuration)
@@ -64,6 +56,11 @@ def main():
           # Center point coordinates
           center = (float(imgSize/2),float(imgSize/2))
           while not rospy.is_shutdown():
+               p.set_gain_setting(gain)
+               p.set_transmit_frequency(transmitFrequency)
+               p.set_transmit_duration(transmitDuration)
+               p.set_sample_period(samplePeriod)
+               p.set_number_of_samples(numberOfSamples)
                p.transmitAngle(angle)
                data = bytearray(getattr(p,'_data'))
                data_lst = [k for k in data]
@@ -88,7 +85,6 @@ def main():
                     cv2.waitKey(27)
                publish(image, imagePub, bridge)
                rospy.sleep(0.1)
-               rospy.spin()
      
      except KeyboardInterrupt:
           print("Shutting down")
@@ -142,3 +138,25 @@ def getSamplePeriod(samplePeriod, _samplePeriodTickDuration = 25e-9):
      # type: (float, float) -> float
      """  Sample period in ns """
      return samplePeriod*_samplePeriodTickDuration
+
+
+# Ping 360 Parameters
+device = rospy.get_param('~device',"/dev/ttyUSB0")
+baudrate = rospy.get_param('~baudrate', 115200)
+gain = rospy.get_param('~gain', 0)
+numberOfSamples = rospy.get_param('~numberOfSamples', 200) # Number of points
+transmitFrequency = rospy.get_param('~transmitFrequency', 740) # Default frequency
+sonarRange = rospy.get_param('~sonarRange', 1) # in m
+speedOfSound = rospy.get_param('~speedOfSound', 1500) # in m/s
+
+samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
+transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
+debug = rospy.get_param('~debug', True)
+
+# Output and ROS parameters
+step = rospy.get_param('~step', 1)
+imgSize = rospy.get_param('~imgSize', 500)
+queue_size= rospy.get_param('~queueSize', 1)
+
+p = Ping360(device, baudrate)
+print("Initialized: %s" % p.initialize())
