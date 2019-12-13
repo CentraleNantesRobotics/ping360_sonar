@@ -1,5 +1,11 @@
 # ping360_sonar
-
+[![GitHub stars](https://img.shields.io/github/stars/CentraleNantesRobotics/ping360_sonar_python.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/stargazers/)
+[![GitHub forks](https://img.shields.io/github/forks/CentraleNantesRobotics/ping360_sonar_python.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/network/)
+[![GitHub issues](https://img.shields.io/github/issues/CentraleNantesRobotics/ping360_sonar_python.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/issues/)
+[![GitHub license](https://img.shields.io/github/license/CentraleNantesRobotics/ping360_sonar_python.svg)](https://github.com/CentraleNantesRobotics/ping360_sonar_python/blob/master/LICENSE)
+[![Github all releases](https://img.shields.io/github/downloads/CentraleNantesRobotics/ping360_sonar_python/total.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/releases/)
+[![GitHub release](https://img.shields.io/github/release/CentraleNantesRobotics/ping360_sonar_python.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/releases/)
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
 ## Overview
 
 A python ROS package for the [BlueRobotics] [Ping360] Sonar. The package has been tested under [ROS] melodic and Ubuntu 16.04. This code is mostly experimental, expect that it changes often.
@@ -45,7 +51,7 @@ Run the main node with:
 
 ## Launch files
 
-* **example.launch:** contains the default parameteres to run the Ping360 Sonar, including the serial port and the baudrate to interface with the sonar. The rest of the parameters are documented here: [Ping360 Documentation](https://docs.bluerobotics.com/ping-protocol/pingmessage-ping360/)
+* **example.launch:** contains the default parameteres to run the Ping360 Sonar, including the serial port and the baudrate to interface with the sonar. The rest of the parameters are documented here: [Ping360 Documentation](https://docs.bluerobotics.com/ping-protocol/pingmessage-ping360/). The same parameters can also be reconfigured using the [dynamic_reconfigure](http://wiki.ros.org/dynamic_reconfigure).
 
 ## Nodes
 
@@ -72,9 +78,6 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [sensor_msgs/Image]: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Image.html
 [Ping360]: https://bluerobotics.com/store/sensors-sonars-cameras/sonar/ping360-sonar-r1-rp/
  
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## Contributors ✨
 
@@ -94,5 +97,4 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
-=======
 
