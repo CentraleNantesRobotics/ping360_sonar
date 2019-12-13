@@ -1,0 +1,25 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "Hameck",
+      "name": "Henrique Martinez Rocamora",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/14954732?v=4",
+      "profile": "https://github.com/Hameck",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "ping360_sonar_python",
+  "projectOwner": "CentraleNantesRobotics",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
