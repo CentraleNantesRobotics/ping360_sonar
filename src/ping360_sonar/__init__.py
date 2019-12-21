@@ -1,4 +1,4 @@
-from polarplot import main
+from main import run
 from brping.definitions import *
 from brping.pingmessage import *
 from brping.device import PingDevice
