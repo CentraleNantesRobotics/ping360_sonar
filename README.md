@@ -10,7 +10,7 @@
 
 A python ROS package for the [BlueRobotics] [Ping360] Sonar. The package has been tested under [ROS] melodic and Ubuntu 16.04. This code is mostly experimental, expect that it changes often.
 
-**Keywords:** ROS, package, ping360
+**Keywords:** ROS, package, ping360, ping360 emulator
 
 ### License
 
@@ -19,7 +19,8 @@ The source code is released under a [MIT license](LICENSE).
 ## Installation
 
 ### Download the latest release
-TODO
+
+Get the latest stable release [here](https://github.com/CentraleNantesRobotics/ping360_sonar_python/releases/latest).
 
 ### Building from Source
 
@@ -58,8 +59,9 @@ Run the main node with:
 
 * **example.launch:** contains the default parameteres to run the Ping360 Sonar, including the serial port and the baudrate to interface with the sonar. The rest of the parameters are documented here: [Ping360 Documentation](https://docs.bluerobotics.com/ping-protocol/pingmessage-ping360/). The same parameters can also be reconfigured using the [dynamic_reconfigure](http://wiki.ros.org/dynamic_reconfigure).
 
-An emulated mode was added to test the package when you don't have the sonar. To run the emulated sonar, set the env variable to "true":
-    <env name="emulated_sonar" value="true" />
+	An emulated mode was added to test the package when you don't have the sonar. To run the emulated sonar, set the env variable to "true":
+
+		<env name="emulated_sonar" value="true" />
 
 ## Nodes
 
@@ -78,7 +80,16 @@ While continuously rotating the sonar, it publishes two types of messages:
 
 * **`/sonar/data`** ([msg/SonarEcho])
 
-	The raw sonar data.
+	Publishes the raw sonar data in a custom message:
+	
+		Header header            #header info
+		float32 angle               # the measurement angle [rad]
+		uint8 gain  # Sonar Gain
+		uint16 number_of_samples 
+		uint16 transmit_frequency # [kHz]
+		uint16 speed_of_sound # [m/s]
+		uint8 range      #  range value [m]
+		uint8[] intensities    # intensity data [0-255].  This is the actual data received from the sonar
 
 
 ## Bugs & Feature Requests
@@ -91,7 +102,7 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [cv_bridge]: http://wiki.ros.org/cv_bridge
 [sensor_msgs/Image]: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Image.html
 [Ping360]: https://bluerobotics.com/store/sensors-sonars-cameras/sonar/ping360-sonar-r1-rp/
- 
+[msg/SonarEcho]: /msg/SonarEcho
 
 ## Contributors ✨
 

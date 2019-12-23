@@ -97,7 +97,7 @@ def main():
           else:
                cv2.destroyAllWindows()
           publishImage(image, imagePub, bridge)
-          rospy.sleep(0.1)
+          rospy.sleep(0.01)
 
 def getSonarData(angle):
      """

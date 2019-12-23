@@ -38,7 +38,7 @@ class Serial:
         self._sample_period = 0
         self._transmit_frequency = 100
         self._number_of_samples = 10
-        self._data = "\x00".join([chr(random.randint(0,255)) for _ in xrange(self._number_of_samples)])
+        self._data = "".join([chr(0) for _ in xrange(self._number_of_samples)])
         self._data_length = 10
 
     ## isOpen()
@@ -157,20 +157,24 @@ class Serial:
     def setParameters(self, message):
         for attr in payload_dict[message.message_id]["field_names"]:
             setattr(self, "_" + attr, getattr(message, attr))
-        # Send a response
+        self.sendDataResponse(message)
+    
+    def sendDataResponse(self, message):
+       # Send a response
+        self.generateRandomData()
         msg = PingMessage(definitions.PING360_DEVICE_DATA)
-        if getattr(message, "transmit") == 1:
-            self._data = "\x00".join([chr(random.randint(0,255)) for _ in xrange(self._number_of_samples)])
         if verbose:
             print("sending a reply %d\t(%s)" % (msg.message_id, msg.name))
         # pull attributes of this class into the message fields (they are named the same)
         for attr in payload_dict[definitions.PING360_DEVICE_DATA]["field_names"]:
-            if attr != "mode":
-                setattr(msg, attr, getattr(self, "_" + attr))
+            setattr(msg, attr, getattr(self, "_" + attr))
         # send the message to the client
         msg.pack_msg_data()
         self._read_data = msg.msg_data
-            
+    
+    def generateRandomData(self):
+        random.seed()
+        self._data = "".join([chr(random.randint(0, 255)) for _ in range(self._number_of_samples)])
 
     ###########
     # Helpers for generating periodic data
@@ -181,8 +185,3 @@ class Serial:
 
     def periodicFnInt(self, amplitude = 0, offset = 0, frequency = 1.0, shift = 0):
         return int(self.periodicFn(amplitude, offset, frequency, shift))
-
-    ###########
-    # Device properties/state
-    ###########
-   
