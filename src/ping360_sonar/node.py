@@ -23,7 +23,7 @@ roslib.load_manifest('ping360_sonar')
 
 
 def callback(config, level):
-     global gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, p
+     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, p
      # Update Ping 360 Parameters
      gain = config['gain']
      numberOfSamples = config['numberOfSamples']
@@ -36,9 +36,10 @@ def callback(config, level):
      step = config['step']
      queue_size = config['queueSize']
      rospy.loginfo("Reconfigure Request")
+     updated = True
      return config
 
-def run():
+def main():
      rospy.init_node('ping360_node')
      srv = Server(sonarConfig, callback)
 
@@ -62,7 +63,8 @@ def run():
      while not rospy.is_shutdown():
           
           # Update to the latest config data
-          updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
+          if updated:
+               updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
           
           # Get sonar response
           data = getSonarData(angle)
@@ -177,11 +179,13 @@ def getSamplePeriod(samplePeriod, _samplePeriodTickDuration = 25e-9):
      return samplePeriod * _samplePeriodTickDuration
 
 def updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples):
+     global updated
      p.set_gain_setting(gain)
      p.set_transmit_frequency(transmitFrequency)
      p.set_transmit_duration(transmitDuration)
      p.set_sample_period(samplePeriod)
      p.set_number_of_samples(numberOfSamples)
+     updated = False
 
 # Ping 360 Parameters
 device = rospy.get_param('~device',"/dev/ttyUSB0")
@@ -202,4 +206,5 @@ imgSize = rospy.get_param('~imgSize', 500)
 queue_size= rospy.get_param('~queueSize', 1)
 
 p = Ping360(device, baudrate)
+updated = False
 print("Initialized: %s" % p.initialize())

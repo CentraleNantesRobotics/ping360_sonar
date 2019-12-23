@@ -58,6 +58,9 @@ Run the main node with:
 
 * **example.launch:** contains the default parameteres to run the Ping360 Sonar, including the serial port and the baudrate to interface with the sonar. The rest of the parameters are documented here: [Ping360 Documentation](https://docs.bluerobotics.com/ping-protocol/pingmessage-ping360/). The same parameters can also be reconfigured using the [dynamic_reconfigure](http://wiki.ros.org/dynamic_reconfigure).
 
+An emulated mode was added to test the package when you don't have the sonar. To run the emulated sonar, set the env variable to "true":
+    <env name="emulated_sonar" value="true" />
+
 ## Nodes
 
 ### ping360_node

@@ -6,7 +6,12 @@
 from brping import definitions
 from brping import pingmessage
 from collections import deque
-import serial
+
+import os
+if os.getenv('emulated_sonar') == 'true':
+    import Emulator as serial
+else:
+    import serial
 import time
 
 class PingDevice(object):
