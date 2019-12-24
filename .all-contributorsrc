@@ -24,6 +24,15 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "tomlogan501",
+      "name": "tomlogan501",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/56969577?v=4",
+      "profile": "https://github.com/tomlogan501",
+      "contributions": [
+        "ideas"
+      ]
     }
   ],
   "contributorsPerLine": 7,
