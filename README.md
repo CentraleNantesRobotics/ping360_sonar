@@ -74,11 +74,11 @@ While continuously rotating the sonar, it publishes two types of messages:
 
 #### Published Topics
 
-* **`/sonar/images`** ([sensor_msgs/Image])
+* **`/ping360_node/sonar/images`** ([sensor_msgs/Image])
 
 	The generated sonar image. 
 
-* **`/sonar/data`** ([msg/SonarEcho])
+* **`/ping360_node/sonar/data`** ([msg/SonarEcho])
 
 	Publishes the raw sonar data in a custom message:
 	
@@ -102,7 +102,7 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [cv_bridge]: http://wiki.ros.org/cv_bridge
 [sensor_msgs/Image]: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Image.html
 [Ping360]: https://bluerobotics.com/store/sensors-sonars-cameras/sonar/ping360-sonar-r1-rp/
-[msg/SonarEcho]: /msg/SonarEcho
+[msg/SonarEcho]: /msg/SonarEcho.msg
 
 ## Contributors ✨
 
@@ -112,6 +112,7 @@ Please report bugs and request features using the [Issue Tracker](https://github
 <table>
   <tr>
     <td align="center"><a href="https://github.com/Hameck"><img src="https://avatars2.githubusercontent.com/u/14954732?v=4" width="100px;" alt=""/><br /><sub><b>Henrique Martinez Rocamora</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Hameck" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Hameck" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://stormix.co"><img src="https://avatars2.githubusercontent.com/u/18377687?v=4" width="100px;" alt=""/><br /><sub><b>Anas Mazouni</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Stormiix" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Stormiix" title="Tests">⚠️</a></td>
   </tr>
 </table>
 

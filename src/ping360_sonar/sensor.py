@@ -205,8 +205,7 @@ class Ping360(PingDevice):
 
 
     def readDeviceInformation(self):
-        return True
-        # return self.request(definitions.PING360_DEVICE_DATA)
+        return self.request(definitions.PING360_DEVICE_DATA)
 
     def transmitAngle(self, angle):
         self.control_transducer(

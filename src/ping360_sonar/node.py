@@ -6,7 +6,6 @@ from math import cos, pi, sin
 
 import cv2
 import numpy as np
-import roslib
 import rospy
 
 from cv_bridge import CvBridge, CvBridgeError
@@ -17,9 +16,6 @@ from std_msgs.msg import String
 from ping360_sonar.cfg import sonarConfig
 from ping360_sonar.msg import SonarEcho
 from sensor import Ping360
-
-roslib.load_manifest('ping360_sonar')
-
 
 
 def callback(config, level):
@@ -48,8 +44,8 @@ def main():
      bridge = CvBridge()
      
      # Topic publishers
-     imagePub = rospy.Publisher("sonar/images", Image, queue_size=queue_size)
-     rawPub = rospy.Publisher("sonar/data", SonarEcho, queue_size=queue_size)
+     imagePub = rospy.Publisher("/ping360_node/sonar/images", Image, queue_size=queue_size)
+     rawPub = rospy.Publisher("/ping360_node/sonar/data", SonarEcho, queue_size=queue_size)
 
      # Initialize and configure the sonar
      updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
@@ -59,6 +55,8 @@ def main():
      
      # Center point coordinates
      center = (float(imgSize/2),float(imgSize/2))
+     
+     rate = rospy.Rate(100) # 10hz
      
      while not rospy.is_shutdown():
           
@@ -93,11 +91,11 @@ def main():
           angle = (angle + step) % 400
           if debug:
                cv2.imshow("PolarPlot",image)
-               cv2.waitKey(27)
+               cv2.waitKey(1)
           else:
                cv2.destroyAllWindows()
           publishImage(image, imagePub, bridge)
-          rospy.sleep(0.01)
+          rate.sleep()
 
 def getSonarData(angle):
      """
