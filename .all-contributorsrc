@@ -14,6 +14,16 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "Stormiix",
+      "name": "Anas Mazouni",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/18377687?v=4",
+      "profile": "https://stormix.co",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
