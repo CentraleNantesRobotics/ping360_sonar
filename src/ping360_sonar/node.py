@@ -11,7 +11,7 @@ import rospy
 from cv_bridge import CvBridge, CvBridgeError
 from dynamic_reconfigure.server import Server
 from sensor_msgs.msg import Image
-from std_msgs.msg import String
+from sensor_msgs.msg import LaserScan
 
 from ping360_sonar.cfg import sonarConfig
 from ping360_sonar.msg import SonarEcho
@@ -46,6 +46,7 @@ def main():
      # Topic publishers
      imagePub = rospy.Publisher("/ping360_node/sonar/images", Image, queue_size=queue_size)
      rawPub = rospy.Publisher("/ping360_node/sonar/data", SonarEcho, queue_size=queue_size)
+     laserPub = rospy.Publisher("/ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
 
      # Initialize and configure the sonar
      updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
@@ -53,10 +54,15 @@ def main():
      # Create a new mono-channel image
      image = np.zeros((imgSize, imgSize, 1), np.uint8)
      
+     # Initial the LaserScan Intensities & Ranges
+     angle_increment = 2*pi*step / 400
+     ranges = [0]*(400 // step)
+     intensities = [0]*(400 // step)
+     
      # Center point coordinates
      center = (float(imgSize/2),float(imgSize/2))
      
-     rate = rospy.Rate(100) # 10hz
+     rate = rospy.Rate(100) # 100hz
      
      while not rospy.is_shutdown():
           
@@ -70,6 +76,20 @@ def main():
           # Contruct and publish Sonar data msg
           rawDataMsg = generateRawMsg(angle, data) # TODO: check for empty responses
           rawPub.publish(rawDataMsg)
+          
+          # Contruct and publish Sonar scan msg
+          scanDataMsg = generateScanMsg(ranges, intensities) # TODO: check for empty responses
+          index = int(round((angle * 2 * pi / 400) / angle_increment))
+          detectedRange = next((x for x in data if x >= threshold), None) # Get the first high intensity value
+          if detectedRange:
+               detectedIndex = data.index(detectedRange) # Get the intensity index
+               distance = calculateRange((1 + detectedIndex), samplePeriod, speedOfSound) # The index+1 represents the number of samples which then can be used to deduce the range
+               # TODO: if distance >= 0.75 and distance <= sonarRange: 
+               ranges[index] = min(distance, ranges[index]) * 100 # In some instance where multiple measures are done in a single angle_increment, we take the closest one
+               intensities[index] = detectedRange if distance <= ranges[index] else intensities[index]
+               if debug:
+                    print("Detected object at {} grad : {}m - intensity {}%".format(angle, ranges[index], float(intensities[index]*100/255)))
+          laserPub.publish(scanDataMsg)
           
           # Contruct and publish Sonar image msg
           linear_factor = float(len(data)) / float(center[0]) #TODO: this should probably be range/pixelsize
@@ -128,12 +148,40 @@ def generateRawMsg(angle, data):
      msg.intensities = data
      return msg
 
+def generateScanMsg(ranges, intensities):
+     """
+     Generates the laserScan message for the scan topic
+     Params:
+          angle int (Gradian Angle)
+          data list List of intensities
+     """
+     msg = LaserScan()
+     msg.header.stamp = rospy.Time.now()
+     msg.header.frame_id = 'sonar_frame'
+     msg.angle_min = 0
+     msg.angle_max = 2 * pi
+     msg.angle_increment = 2*pi*step / 400
+     msg.time_increment = 0
+     msg.range_min = .75
+     msg.range_max = sonarRange
+     msg.ranges = ranges
+     msg.intensities = intensities
+
+     return msg
+
 def publishImage(image, imagePub, bridge):
      try:
           imagePub.publish(bridge.cv2_to_imgmsg(image, "mono8"))
      except CvBridgeError as e:
           rospy.logwarn("Failed to publish sensor image")
           print(e)
+
+def calculateRange(numberOfSamples, samplePeriod, speedOfSound, _samplePeriodTickDuration = 25e-9):
+     # type: (float, int, float, float) -> float
+     """
+      Calculate the range based in the duration
+     """
+     return numberOfSamples * speedOfSound * _samplePeriodTickDuration * samplePeriod / 2
 
 def calculateSamplePeriod(distance, numberOfSamples, speedOfSound, _samplePeriodTickDuration = 25e-9):
      # type: (float, int, int, float) -> float
@@ -197,6 +245,8 @@ speedOfSound = rospy.get_param('~speedOfSound', 1500) # in m/s
 samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
 transmitDuration = adjustTransmitDuration(sonarRange, samplePeriod, speedOfSound)
 debug = rospy.get_param('~debug', True)
+
+threshold = rospy.get_param('~threshold', 200) # 0-255
 
 # Output and ROS parameters
 step = rospy.get_param('~step', 1)

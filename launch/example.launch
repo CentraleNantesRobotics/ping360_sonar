@@ -3,7 +3,7 @@
     <node pkg="ping360_sonar" type="ping360_node" name="ping360_node" output="screen">
         <param name="device" value="/dev/ttyUSB0"/>
         <param name="baudrate" value="115200"/>
-        <param name="debug" value="True"/>
+        <param name="debug" value="False"/>
         <param name="imgSize" value="500"/>
         <param name="gain" value="0"/>
         <param name="step" value="1"/>

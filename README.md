@@ -91,6 +91,10 @@ While continuously rotating the sonar, it publishes two types of messages:
 		uint8 range      #  range value [m]
 		uint8[] intensities    # intensity data [0-255].  This is the actual data received from the sonar
 
+* **`/ping360_node/sonar/scan`** ([sensor_msgs/LaserScan])
+
+	Publishes a LaserScan msg with ranges detected with a certain intensity threshold.
+
 
 ## Bugs & Feature Requests
 
