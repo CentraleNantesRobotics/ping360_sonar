@@ -74,11 +74,11 @@ While continuously rotating the sonar, it publishes two types of messages:
 
 #### Published Topics
 
-* **`/sonar/images`** ([sensor_msgs/Image])
+* **`/ping360_node/sonar/images`** ([sensor_msgs/Image])
 
 	The generated sonar image. 
 
-* **`/sonar/data`** ([msg/SonarEcho])
+* **`/ping360_node/sonar/data`** ([msg/SonarEcho])
 
 	Publishes the raw sonar data in a custom message:
 	
