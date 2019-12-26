@@ -19,7 +19,7 @@ from sensor import Ping360
 
 
 def callback(config, level):
-     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, p
+     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, p, threshold
      # Update Ping 360 Parameters
      gain = config['gain']
      numberOfSamples = config['numberOfSamples']
@@ -31,6 +31,7 @@ def callback(config, level):
      debug = config['debug']
      step = config['step']
      queue_size = config['queueSize']
+     threshold = config['threshold']
      rospy.loginfo("Reconfigure Request")
      updated = True
      return config
