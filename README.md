@@ -27,12 +27,12 @@ Get the latest stable release [here](https://github.com/CentraleNantesRobotics/p
 #### Dependencies
 
 - [Robot Operating System (ROS)](http://wiki.ros.org) (middleware for robotics),
-- opencv
+- OpenCV
 - [cv_bridge]
 
 #### Building
 
-Before building from source, install [ping-protocol Python Lib](https://pypi.org/project/bluerobotics-ping/):
+Before building from source, install [ping-protocol python lib](https://pypi.org/project/bluerobotics-ping/):
 
 	pip install bluerobotics-ping
 
@@ -93,8 +93,21 @@ While continuously rotating the sonar, it publishes two types of messages:
 
 * **`/ping360_node/sonar/scan`** ([sensor_msgs/LaserScan])
 
-	Publishes a LaserScan msg with ranges detected with a certain intensity threshold.
+	Publishes a LaserScan msg with ranges detected with a certain intensity threshold:
 
+		float32 angle_min = 0     # start angle of the scan [rad]
+		float32 angle_max = 2*pi  # end angle of the scan [rad]
+		float32 angle_increment   # angular distance between measurements, calculated using the configured Step  [rad]
+
+		float32 range_min = .75   # minimum range value [m]
+		float32 range_max = sonarRange # maximum range value, it's set to the configured sonarRange [m]
+
+		float32[] ranges         # calculated ranges that correspond to an intensity > threshold [m] 
+		float32[] intensities    # sensor intensity data [0-255]
+
+	Note: 
+	- ranges values < range_min or > range_max should be discarded
+	- don't forget to set the frame to *sonar_frame* when using Rviz
 
 ## Bugs & Feature Requests
 
@@ -107,8 +120,9 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [sensor_msgs/Image]: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Image.html
 [Ping360]: https://bluerobotics.com/store/sensors-sonars-cameras/sonar/ping360-sonar-r1-rp/
 [msg/SonarEcho]: /msg/SonarEcho.msg
+[sensor_msgs/LaserScan]: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/LaserScan.html
 
-## Contributors ✨
+## Contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -126,5 +140,6 @@ Please report bugs and request features using the [Issue Tracker](https://github
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. 
+
 Contributions of any kind welcome! Please refer to our [Contribution Guide](CONTRIBUTING.md)
 
