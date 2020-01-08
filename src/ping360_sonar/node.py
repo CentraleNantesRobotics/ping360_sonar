@@ -19,7 +19,7 @@ from sensor import Ping360
 
 
 def callback(config, level):
-     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, p, threshold
+     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold
      # Update Ping 360 Parameters
      gain = config['gain']
      numberOfSamples = config['numberOfSamples']
@@ -37,6 +37,9 @@ def callback(config, level):
      return config
 
 def main():
+     sensor = Ping360(device, baudrate)
+     print("Initialized: %s" % sensor.initialize())
+     
      rospy.init_node('ping360_node')
      srv = Server(sonarConfig, callback)
 
@@ -50,7 +53,7 @@ def main():
      laserPub = rospy.Publisher("/ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
 
      # Initialize and configure the sonar
-     updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
+     updateSonarConfig(sensor, gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
 
      # Create a new mono-channel image
      image = np.zeros((imgSize, imgSize, 1), np.uint8)
@@ -66,13 +69,12 @@ def main():
      rate = rospy.Rate(100) # 100hz
      
      while not rospy.is_shutdown():
-          
           # Update to the latest config data
           if updated:
-               updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
+               updateSonarConfig(sensor, gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples)
           
           # Get sonar response
-          data = getSonarData(angle)
+          data = getSonarData(sensor, angle)
           
           # Contruct and publish Sonar data msg
           rawDataMsg = generateRawMsg(angle, data) # TODO: check for empty responses
@@ -113,16 +115,17 @@ def main():
           publishImage(image, imagePub, bridge)
           rate.sleep()
 
-def getSonarData(angle):
+def getSonarData(sensor, angle):
      """
      Transmits the sonar angle and returns the sonar intensities
      Params:
+          sensor  Ping360 (Sensor class)
           angle int (Gradian Angle)
      Return:
           data list Intensities from 0 - 255 
      """
-     p.transmitAngle(angle)
-     data = bytearray(getattr(p,'_data'))
+     sensor.transmitAngle(angle)
+     data = bytearray(getattr(sensor,'_data'))
      return [k for k in data]
 
 def generateRawMsg(angle, data):
@@ -220,13 +223,13 @@ def getSamplePeriod(samplePeriod, _samplePeriodTickDuration = 25e-9):
      """  Sample period in ns """
      return samplePeriod * _samplePeriodTickDuration
 
-def updateSonarConfig(gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples):
+def updateSonarConfig(sensor, gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples):
      global updated
-     p.set_gain_setting(gain)
-     p.set_transmit_frequency(transmitFrequency)
-     p.set_transmit_duration(transmitDuration)
-     p.set_sample_period(samplePeriod)
-     p.set_number_of_samples(numberOfSamples)
+     sensor.set_gain_setting(gain)
+     sensor.set_transmit_frequency(transmitFrequency)
+     sensor.set_transmit_duration(transmitDuration)
+     sensor.set_sample_period(samplePeriod)
+     sensor.set_number_of_samples(numberOfSamples)
      updated = False
 
 # Ping 360 Parameters
@@ -248,7 +251,4 @@ threshold = rospy.get_param('~threshold', 200) # 0-255
 step = rospy.get_param('~step', 1)
 imgSize = rospy.get_param('~imgSize', 500)
 queue_size= rospy.get_param('~queueSize', 1)
-
-p = Ping360(device, baudrate)
 updated = False
-print("Initialized: %s" % p.initialize())
