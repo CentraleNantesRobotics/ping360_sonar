@@ -110,11 +110,6 @@ def main():
                continue
           
           angle = (angle + step) % 400
-          if debug:
-               cv2.imshow("PolarPlot",image)
-               cv2.waitKey(1)
-          else:
-               cv2.destroyAllWindows()
           publishImage(image, imagePub, bridge)
           rate.sleep()
 
