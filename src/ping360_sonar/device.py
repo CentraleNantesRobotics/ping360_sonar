@@ -14,9 +14,11 @@ else:
     import serial
 import time
 
+
 class PingDevice(object):
 
     _input_buffer = deque()
+
     def __init__(self, device_name, baudrate=115200):
         if device_name is None:
             print("Device name is required")
@@ -94,7 +96,6 @@ class PingDevice(object):
         msg.requested_id = m_id
         msg.pack_msg_data()
         self.write(msg.msg_data)
-
         # uncomment to return nacks in addition to m_id
         # return self.wait_message([m_id, definitions.COMMON_NACK], timeout)
 
@@ -181,7 +182,7 @@ class PingDevice(object):
             "firmware_version_major": self._firmware_version_major,  # Firmware version major number.
             "firmware_version_minor": self._firmware_version_minor,  # Firmware version minor number.
             "firmware_version_patch": self._firmware_version_patch,  # Firmware version patch number.
-            "reserved": self._reserved,  # reserved
+            "reserved": self._reserved,        # reserved
         })
         return data
 
@@ -202,7 +203,7 @@ class PingDevice(object):
             "version_major": self._version_major,  # Protocol version major number.
             "version_minor": self._version_minor,  # Protocol version minor number.
             "version_patch": self._version_patch,  # Protocol version patch number.
-            "reserved": self._reserved,  # reserved
+            "reserved": self._reserved,        # reserved
         })
         return data
 
@@ -229,5 +230,4 @@ if __name__ == "__main__":
     print("  " + str(result))
     print("  > > pass: %s < <" % (result is not None))
 
-    
     print(p)

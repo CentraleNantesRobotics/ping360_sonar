@@ -9,8 +9,9 @@ from brping import pingmessage
 import serial
 import time
 
+
 class Ping360(PingDevice):
-    
+
     _gain_setting = 0
     _mode = 0
     _angle = 0
@@ -18,7 +19,7 @@ class Ping360(PingDevice):
     _sample_period = 0
     _transmit_frequency = 100
     _number_of_samples = 10
-    
+
     def initialize(self):
         if not PingDevice.initialize(self):
             return False
@@ -51,7 +52,7 @@ class Ping360(PingDevice):
             "sample_period": self._sample_period,  # Time interval between individual signal intensity samples in 25nsec increments (80 to 40000 == 2 microseconds to 1000 microseconds)
             "transmit_frequency": self._transmit_frequency,  # Units: kHz; Acoustic operating frequency. Frequency range is 500kHz to 1000kHz, however it is only practical to use say 650kHz to 850kHz due to the narrow bandwidth of the acoustic receiver.
             "number_of_samples": self._number_of_samples,  # Number of samples per reflected signal
-            "data": self._data,  # 8 bit binary data array representing sonar echo strength
+            "data": self._data,        # 8 bit binary data array representing sonar echo strength
         })
         return data
 
@@ -82,7 +83,6 @@ class Ping360(PingDevice):
         m.pack_msg_data()
         self.write(m.msg_data)
 
-
     def control_reset(self, bootloader, reserved):
         m = pingmessage.PingMessage(definitions.PING360_RESET)
         m.bootloader = bootloader
@@ -103,7 +103,6 @@ class Ping360(PingDevice):
         m.reserved = reserved
         m.pack_msg_data()
         self.write(m.msg_data)
-
 
     def set_mode(self, mode):
         self.control_transducer(
@@ -203,13 +202,12 @@ class Ping360(PingDevice):
         )
         return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
 
-
     def readDeviceInformation(self):
         return self.request(definitions.PING360_DEVICE_DATA)
 
     def transmitAngle(self, angle):
         self.control_transducer(
-            0, # reserved
+            0,  # reserved
             self._gain_setting,
             angle,
             self._transmit_duration,
@@ -220,6 +218,6 @@ class Ping360(PingDevice):
             0
         )
         return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
-    
+
     def transmit(self):
         return self.transmitAngle(self._angle)
