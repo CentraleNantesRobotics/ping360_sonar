@@ -1,0 +1,30 @@
+name: ROS CI
+on: [push]
+jobs:    
+  build:
+    runs-on: ubuntu-18.04
+    container: ros:melodic-ros-base
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install catkin & package dependencies
+        run: |
+          cd / && ./ros_entrypoint.sh
+          apt-get update
+          apt-get install -y python-pip
+          apt-get install -y ros-melodic-catkin python-catkin-tools
+          apt-get install -y ros-melodic-cv-bridge
+          pip install bluerobotics-ping
+      - name: Setup catkin workspace
+        run: |
+          mkdir -p ~/catkin_ws/src
+          cd ~/catkin_ws
+          /bin/bash -c "source /opt/ros/melodic/setup.bash && catkin build" 
+          
+      - name: Build package
+        run: |
+          cd ~/catkin_ws/src
+          mv $GITHUB_WORKSPACE .
+          /bin/bash -c "source ../devel/setup.bash && catkin build"
+      - name: Lint
+        run: |
+          catkin build ping360_sonar --catkin-make-args roslint
