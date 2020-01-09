@@ -1,10 +1,10 @@
 # ping360_sonar
-[![GitHub stars](https://img.shields.io/github/stars/CentraleNantesRobotics/ping360_sonar_python.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/stargazers/)
-[![GitHub forks](https://img.shields.io/github/forks/CentraleNantesRobotics/ping360_sonar_python.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/network/)
-[![GitHub issues](https://img.shields.io/github/issues/CentraleNantesRobotics/ping360_sonar_python.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/issues/)
-[![GitHub license](https://img.shields.io/github/license/CentraleNantesRobotics/ping360_sonar_python.svg)](https://github.com/CentraleNantesRobotics/ping360_sonar_python/blob/master/LICENSE)
-[![Github all releases](https://img.shields.io/github/downloads/CentraleNantesRobotics/ping360_sonar_python/total.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/releases/)
-[![GitHub release](https://img.shields.io/github/release/CentraleNantesRobotics/ping360_sonar_python.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar_python/releases/)
+[![GitHub stars](https://img.shields.io/github/stars/CentraleNantesRobotics/ping360_sonar.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar/stargazers/)
+[![GitHub forks](https://img.shields.io/github/forks/CentraleNantesRobotics/ping360_sonar.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar/network/)
+[![GitHub issues](https://img.shields.io/github/issues/CentraleNantesRobotics/ping360_sonar.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar/issues/)
+[![GitHub license](https://img.shields.io/github/license/CentraleNantesRobotics/ping360_sonar.svg)](https://github.com/CentraleNantesRobotics/ping360_sonar/blob/master/LICENSE)
+[![Github all releases](https://img.shields.io/github/downloads/CentraleNantesRobotics/ping360_sonar/total.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar/releases/)
+[![GitHub release](https://img.shields.io/github/release/CentraleNantesRobotics/ping360_sonar.svg)](https://GitHub.com/CentraleNantesRobotics/ping360_sonar/releases/)
 [![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
 ## Overview
 
@@ -20,7 +20,7 @@ The source code is released under a [MIT license](LICENSE).
 
 ### Download the latest release
 
-Get the latest stable release [here](https://github.com/CentraleNantesRobotics/ping360_sonar_python/releases/latest).
+Get the latest stable release [here](https://github.com/CentraleNantesRobotics/ping360_sonar/releases/latest).
 
 ### Building from Source
 
@@ -39,7 +39,7 @@ Before building from source, install [ping-protocol python lib](https://pypi.org
 To build from source, clone the latest version from this repository into your catkin workspace and compile the package using
 
 	cd catkin_workspace/src
-	git clone https://github.com/CentraleNantesRobotics/ping360_sonar_python.git
+	git clone https://github.com/CentraleNantesRobotics/ping360_sonar.git
 	cd ../
 	catkin build
 
@@ -111,7 +111,7 @@ While continuously rotating the sonar, it publishes two types of messages:
 
 ## Bugs & Feature Requests
 
-Please report bugs and request features using the [Issue Tracker](https://github.com/CentraleNantesRobotics/ping360_sonar_python/issues).
+Please report bugs and request features using the [Issue Tracker](https://github.com/CentraleNantesRobotics/ping360_sonar/issues).
 
 
 [ROS]: http://www.ros.org
@@ -129,8 +129,8 @@ Please report bugs and request features using the [Issue Tracker](https://github
 <!-- markdownlint-disable -->
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/Hameck"><img src="https://avatars2.githubusercontent.com/u/14954732?v=4" width="100px;" alt=""/><br /><sub><b>Henrique Martinez Rocamora</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Hameck" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Hameck" title="Tests">⚠️</a></td>
-    <td align="center"><a href="https://stormix.co"><img src="https://avatars2.githubusercontent.com/u/18377687?v=4" width="100px;" alt=""/><br /><sub><b>Anas Mazouni</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Stormiix" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar_python/commits?author=Stormiix" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://github.com/Hameck"><img src="https://avatars2.githubusercontent.com/u/14954732?v=4" width="100px;" alt=""/><br /><sub><b>Henrique Martinez Rocamora</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Hameck" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Hameck" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://stormix.co"><img src="https://avatars2.githubusercontent.com/u/18377687?v=4" width="100px;" alt=""/><br /><sub><b>Anas Mazouni</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Stormiix" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Stormiix" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://github.com/tomlogan501"><img src="https://avatars3.githubusercontent.com/u/56969577?v=4" width="100px;" alt=""/><br /><sub><b>tomlogan501</b></sub></a><br /><a href="#ideas-tomlogan501" title="Ideas, Planning, & Feedback">🤔</a></td>
   </tr>
 </table>
