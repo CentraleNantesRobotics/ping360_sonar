@@ -13,6 +13,7 @@ jobs:
           apt-get install -y python-pip
           apt-get install -y ros-melodic-catkin python-catkin-tools
           apt-get install -y ros-melodic-cv-bridge
+          apt-get install -y ros-melodic-roslint
           pip install bluerobotics-ping
       - name: Setup catkin workspace
         run: |
@@ -23,8 +24,9 @@ jobs:
       - name: Build package
         run: |
           cd ~/catkin_ws/src
-          mv $GITHUB_WORKSPACE .
+          cp -r $GITHUB_WORKSPACE .
           /bin/bash -c "source ../devel/setup.bash && catkin build"
       - name: Lint
         run: |
+          cd ~/catkin_ws/src
           catkin build ping360_sonar --catkin-make-args roslint
