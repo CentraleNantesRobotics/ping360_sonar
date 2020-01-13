@@ -9,8 +9,10 @@ import os
 verbose = False
 payload_dict = definitions.payload_dict_all
 
-
-# a Serial class emulator
+# A Serial class emulator
+# Author: D. Thiebaut
+# This program energizes the fakeSerial simulator using example code taken
+# from http://pyserial.sourceforge.net/shortintro.html
 class Serial:
 
     # init(): the constructor.  Many of the arguments have default values
