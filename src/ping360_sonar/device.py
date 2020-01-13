@@ -3,6 +3,7 @@
 # device.py
 # A device API for devices implementing Blue Robotics ping-protocol
 
+import time
 from brping import definitions
 from brping import pingmessage
 from collections import deque
@@ -12,11 +13,12 @@ if os.getenv('emulated_sonar') == 'true':
     import Emulator as serial
 else:
     import serial
-import time
+
 
 class PingDevice(object):
 
     _input_buffer = deque()
+
     def __init__(self, device_name, baudrate=115200):
         if device_name is None:
             print("Device name is required")
@@ -25,7 +27,7 @@ class PingDevice(object):
         try:
             print("Opening %s at %d bps" % (device_name, baudrate))
 
-            ## Serial object for device communication
+            # Serial object for device communication
             self.iodev = serial.Serial(device_name, baudrate)
             self.iodev.send_break()
             self.iodev.write("U".encode("utf-8"))
@@ -35,16 +37,17 @@ class PingDevice(object):
             print("\t", e)
             exit(1)
 
-        ## A helper class to take care of decoding the input stream
+        # A helper class to take care of decoding the input stream
         self.parser = pingmessage.PingParser()
 
-        ## device id of this Ping1D object, used for dst_device_id in outgoing messages
+        # device id of this Ping1D object, used for dst_device_id in outgoing messages
         self.my_id = 255
 
     ##
     # @brief Consume rx buffer data until a new message is successfully decoded
     #
-    # @return A new PingMessage: as soon as a message is parsed (there may be data remaining in the buffer to be parsed, thus requiring subsequent calls to read())
+    # @return A new PingMessage: as soon as a message is parsed (there may be
+    # data remaining in the buffer to be parsed, thus requiring subsequent calls to read())
     # @return None: if the buffer is empty and no message has been parsed
     def read(self):
         bytes = self.iodev.read(self.iodev.in_waiting)
@@ -94,7 +97,6 @@ class PingDevice(object):
         msg.requested_id = m_id
         msg.pack_msg_data()
         self.write(msg.msg_data)
-
         # uncomment to return nacks in addition to m_id
         # return self.wait_message([m_id, definitions.COMMON_NACK], timeout)
 
@@ -133,7 +135,8 @@ class PingDevice(object):
                 for attr in pingmessage.payload_dict[msg.message_id]["field_names"]:
                     setattr(self, "_" + attr, getattr(msg, attr))
             except AttributeError as e:
-                print("attribute error while handling msg %d (%s): %s" % (msg.message_id, msg.name, msg.msg_data))
+                print("attribute error while handling msg %d (%s): %s" %
+                      (msg.message_id, msg.name, msg.msg_data))
                 return False
         else:
             print("Unrecognized message: %d", msg)
@@ -152,12 +155,16 @@ class PingDevice(object):
         for attr in sorted(attrs):
             try:
                 if attr != 'iodev':
-                    representation += "\n  - " + attr + "(hex): " + str([hex(item) for item in getattr(self, attr)])
+                    representation += "\n  - " + attr + \
+                        "(hex): " + str([hex(item)
+                                         for item in getattr(self, attr)])
                 if attr != 'data':
-                    representation += "\n  - " + attr + "(string): " + str(getattr(self, attr))
+                    representation += "\n  - " + attr + \
+                        "(string): " + str(getattr(self, attr))
             # TODO: Better filter this exception
             except:
-                representation += "\n  - " + attr + ": " + str(getattr(self, attr))
+                representation += "\n  - " + attr + \
+                    ": " + str(getattr(self, attr))
         return representation
 
     ##
@@ -176,12 +183,16 @@ class PingDevice(object):
         if self.request(definitions.COMMON_DEVICE_INFORMATION) is None:
             return None
         data = ({
-            "device_type": self._device_type,  # Device type. 0: Unknown; 1: Ping Echosounder; 2: Ping360
+            # Device type. 0: Unknown; 1: Ping Echosounder; 2: Ping360
+            "device_type": self._device_type,
             "device_revision": self._device_revision,  # device-specific hardware revision
-            "firmware_version_major": self._firmware_version_major,  # Firmware version major number.
-            "firmware_version_minor": self._firmware_version_minor,  # Firmware version minor number.
-            "firmware_version_patch": self._firmware_version_patch,  # Firmware version patch number.
-            "reserved": self._reserved,  # reserved
+            # Firmware version major number.
+            "firmware_version_major": self._firmware_version_major,
+            # Firmware version minor number.
+            "firmware_version_minor": self._firmware_version_minor,
+            # Firmware version patch number.
+            "firmware_version_patch": self._firmware_version_patch,
+            "reserved": self._reserved,        # reserved
         })
         return data
 
@@ -199,10 +210,13 @@ class PingDevice(object):
         if self.request(definitions.COMMON_PROTOCOL_VERSION) is None:
             return None
         data = ({
-            "version_major": self._version_major,  # Protocol version major number.
-            "version_minor": self._version_minor,  # Protocol version minor number.
-            "version_patch": self._version_patch,  # Protocol version patch number.
-            "reserved": self._reserved,  # reserved
+            # Protocol version major number.
+            "version_major": self._version_major,
+            # Protocol version minor number.
+            "version_minor": self._version_minor,
+            # Protocol version patch number.
+            "version_patch": self._version_patch,
+            "reserved": self._reserved,        # reserved
         })
         return data
 
@@ -210,9 +224,12 @@ class PingDevice(object):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Ping python library example.")
-    parser.add_argument('--device', action="store", required=True, type=str, help="Ping device port.")
-    parser.add_argument('--baudrate', action="store", type=int, default=115200, help="Ping device baudrate.")
+    parser = argparse.ArgumentParser(
+        description="Ping python library example.")
+    parser.add_argument('--device', action="store",
+                        required=True, type=str, help="Ping device port.")
+    parser.add_argument('--baudrate', action="store", type=int,
+                        default=115200, help="Ping device baudrate.")
     args = parser.parse_args()
 
     p = PingDevice(args.device, args.baudrate)
@@ -229,5 +246,4 @@ if __name__ == "__main__":
     print("  " + str(result))
     print("  > > pass: %s < <" % (result is not None))
 
-    
     print(p)

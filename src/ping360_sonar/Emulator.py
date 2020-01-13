@@ -4,32 +4,37 @@ import time
 import errno
 import math
 import random
-import os
 
 verbose = False
 payload_dict = definitions.payload_dict_all
-# a Serial class emulator 
+
+# A Serial class emulator
+# Author: D. Thiebaut
+# This program energizes the fakeSerial simulator using example code taken
+# from http://pyserial.sourceforge.net/shortintro.html
+
+
 class Serial:
 
-    ## init(): the constructor.  Many of the arguments have default values
+    # init(): the constructor.  Many of the arguments have default values
     # and can be skipped when calling the constructor.
-    def __init__( self, port='COM1', baudrate = 115200, timeout=1,
-                  bytesize = 8, parity = 'N', stopbits = 1, xonxoff=0,
-                  rtscts = 0):
-        self.name     = port
-        self.port     = port
-        self.timeout  = timeout
-        self.parity   = parity
+    def __init__(self, port='COM1', baudrate=115200, timeout=1,
+                 bytesize=8, parity='N', stopbits=1, xonxoff=0,
+                 rtscts=0):
+        self.name = port
+        self.port = port
+        self.timeout = timeout
+        self.parity = parity
         self.baudrate = baudrate
         self.bytesize = bytesize
         self.stopbits = stopbits
-        self.xonxoff  = xonxoff
-        self.rtscts   = rtscts
-        self._isOpen  = True
+        self.xonxoff = xonxoff
+        self.rtscts = rtscts
+        self._isOpen = True
         self._receivedData = ""
         self.in_waiting = 1
 
-        self.parser = PingParser() # used to parse incoming client comunications
+        self.parser = PingParser()  # used to parse incoming client comunications
 
         self._gain_setting = 0
         self._mode = 0
@@ -41,27 +46,27 @@ class Serial:
         self._data = "".join([chr(0) for _ in xrange(self._number_of_samples)])
         self._data_length = 10
 
-    ## isOpen()
+    # isOpen()
     # returns True if the port to the Arduino is open.  False otherwise
-    def isOpen( self ):
+    def isOpen(self):
         return self._isOpen
 
     def send_break(self):
         pass
 
-    ## open()
+    # open()
     # opens the port
-    def open( self ):
+    def open(self):
         self._isOpen = True
 
-    ## close()
+    # close()
     # closes the port
-    def close( self ):
+    def close(self):
         self._isOpen = False
 
-    ## write()
+    # write()
     # writes a string of characters to the Arduino
-    def write( self, data ):
+    def write(self, data):
         try:
             # digest data coming in from client
             for byte in data:
@@ -71,45 +76,46 @@ class Serial:
 
         except EnvironmentError as e:
             if e.errno == errno.EAGAIN:
-                pass # waiting for data
+                pass  # waiting for data
             else:
                 if verbose:
                     print("Error reading data", e)
 
         except KeyError as e:
-           if verbose:
-                print("skipping unrecognized message id: %d" % self.parser.rx_msg.message_id)
+            if verbose:
+                print("skipping unrecognized message id: %d" %
+                      self.parser.rx_msg.message_id)
                 print("contents: %s" % self.parser.rx_msg.msg_data)
-           pass
+            pass
 
-    ## read()
+    # read()
     # reads n characters from the fake Arduino. Actually n characters
     # are read from the string _data and returned to the caller.
-    def read( self, n=1 ):
+    def read(self, n=1):
         s = self._read_data[0:n]
         self._read_data = self._read_data[n:]
         return s
 
-    ## readline()
+    # readline()
     # reads characters from the fake Arduino until a \n is found.
-    def readline( self ):
-        returnIndex = self._read_data.index( "\n" )
+    def readline(self):
+        returnIndex = self._read_data.index("\n")
         if returnIndex != -1:
-            s = self._read_data[0:returnIndex+1]
-            self._read_data = self._read_data[returnIndex+1:]
+            s = self._read_data[0:returnIndex + 1]
+            self._read_data = self._read_data[returnIndex + 1:]
             return s
         else:
             return ""
 
-    ## __str__()
+    # __str__()
     # returns a string representation of the serial class
-    def __str__( self ):
-        return  "Serial<id=0xa81c10, open=%s>( port='%s', baudrate=%d," \
-               % ( str(self.isOpen), self.port, self.baudrate ) \
-               + " bytesize=%d, parity='%s', stopbits=%d, xonxoff=%d, rtscts=%d)"\
-               % ( self.bytesize, self.parity, self.stopbits, self.xonxoff,
-                   self.rtscts )
-    
+    def __str__(self):
+        return "Serial<id=0xa81c10, open=%s>( port='%s', baudrate=%d," \
+            % (str(self.isOpen), self.port, self.baudrate) \
+            + " bytesize=%d, parity='%s', stopbits=%d, xonxoff=%d, rtscts=%d)" \
+            % (self.bytesize, self.parity, self.stopbits, self.xonxoff,
+               self.rtscts)
+
     # Send a message to the client, the message fields are populated by the
     # attributes of this object (either variable or method) with names matching
     # the message field names
@@ -138,7 +144,8 @@ class Serial:
     # handle an incoming client message
     def handleMessage(self, message):
         if verbose:
-            print("receive message %d\t(%s)" % (message.message_id, message.name))
+            print("receive message %d\t(%s)" %
+                  (message.message_id, message.name))
         if message.message_id == definitions.COMMON_GENERAL_REQUEST:
             # the client is requesting a message from us
             self.sendMessage(message.requested_id)
@@ -151,6 +158,7 @@ class Serial:
         else:
             if verbose:
                 print("Unknown msg type")
+
     # Extract message fields into attribute values
     # This should only be performed with the 'set' category of messages
     # TODO: mechanism to filter by "set"
@@ -158,9 +166,9 @@ class Serial:
         for attr in payload_dict[message.message_id]["field_names"]:
             setattr(self, "_" + attr, getattr(message, attr))
         self.sendDataResponse(message)
-    
+
     def sendDataResponse(self, message):
-       # Send a response
+        # Send a response
         self.generateRandomData()
         msg = PingMessage(definitions.PING360_DEVICE_DATA)
         if verbose:
@@ -171,17 +179,17 @@ class Serial:
         # send the message to the client
         msg.pack_msg_data()
         self._read_data = msg.msg_data
-    
+
     def generateRandomData(self):
         random.seed()
-        self._data = "".join([chr(random.randint(0, 255)) for _ in range(self._number_of_samples)])
-
-    ###########
+        self._data = "".join([chr(random.randint(0, 255))
+                              for _ in range(self._number_of_samples)])
+    #
     # Helpers for generating periodic data
-    ###########
-    
-    def periodicFn(self, amplitude = 0, offset = 0, frequency = 1.0, shift = 0):
+    #
+
+    def periodicFn(self, amplitude=0, offset=0, frequency=1.0, shift=0):
         return amplitude * math.sin(frequency * time.time() + shift) + offset
 
-    def periodicFnInt(self, amplitude = 0, offset = 0, frequency = 1.0, shift = 0):
+    def periodicFnInt(self, amplitude=0, offset=0, frequency=1.0, shift=0):
         return int(self.periodicFn(amplitude, offset, frequency, shift))
