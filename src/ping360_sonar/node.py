@@ -146,7 +146,7 @@ def main():
             # The index+1 represents the number of samples which then can be used to deduce the range
             distance = calculateRange(
                 (1 + detectedIndex), samplePeriod, speedOfSound)
-            if distance >= 0.75 and distance <= sonarRange:
+            if distance >= 0 and distance <= sonarRange:
                 ranges[index] = distance
                 intensities[index] = detectedIntensity
                 if debug:
