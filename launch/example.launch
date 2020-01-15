@@ -1,4 +1,5 @@
 <launch>
+    <node pkg="tf" type="static_transform_publisher" name="transform_sonar_frame" args="0 0 0 0 0 0 1 map sonar_frame 10" />
     <env name="emulated_sonar" value="false" />
     <node pkg="ping360_sonar" type="ping360_node" name="ping360_node" output="screen">
         <param name="device" value="/dev/ttyUSB0"/>
