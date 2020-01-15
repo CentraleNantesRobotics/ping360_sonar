@@ -64,6 +64,10 @@ Run the main node with:
 
 		<env name="emulated_sonar" value="true" />
 
+	The results from the emulation should be:
+
+![alt img](https://github.com/CentraleNantesRobotics/ping360_sonar/blob/master/img/print.png)
+
 ## Nodes
 
 ### ping360_node
