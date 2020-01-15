@@ -4,6 +4,7 @@ import time
 import errno
 import math
 import random
+import numpy as np
 
 verbose = False
 payload_dict = definitions.payload_dict_all
@@ -182,8 +183,14 @@ class Serial:
 
     def generateRandomData(self):
         random.seed()
-        self._data = "".join([chr(random.randint(0, 255))
-                              for _ in range(self._number_of_samples)])
+        #self._data = "".join([chr(random.randint(0, 255))
+        #                      for _ in range(self._number_of_samples)])
+        sigma = 10
+        mu = 100
+        
+        self._data = "".join([chr(int(255*np.exp(-np.power(x - mu, 2.) / (2 * np.power(sigma, 2.)))))
+                              for x in range(self._number_of_samples)])
+                             
     #
     # Helpers for generating periodic data
     #
