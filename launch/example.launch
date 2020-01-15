@@ -10,7 +10,7 @@
         <param name="step" value="1"/>
         <param name="numberOfSamples" value="200"/>
         <param name="transmitFrequency" value="740"/>
-        <param name="sonarRange" value="1"/>
+        <param name="sonarRange" value="10"/>
         <param name="speedOfSound" value="1500"/>
         <param name="queueSize" value="1"/>
         <param name="threshold" value="100"/>
