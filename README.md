@@ -64,6 +64,12 @@ Run the main node with:
 
 		<env name="emulated_sonar" value="true" />
 
+	Three extra parameters can be set to toggle specific topics, by default they all are set to true.
+	
+        <param name="enableImageTopic" value="True"/> 
+        <param name="enableScanTopic" value="True"/> 
+        <param name="enableDataTopic" value="True"/>
+
 ## Nodes
 
 ### ping360_node
@@ -78,6 +84,7 @@ While continuously rotating the sonar, it publishes two types of messages:
 * **`/ping360_node/sonar/images`** ([sensor_msgs/Image])
 
 	The generated sonar image. 
+	This topic can be toggled using the **enableImageTopic** parameter.
 
 * **`/ping360_node/sonar/data`** ([msg/SonarEcho])
 
@@ -91,6 +98,8 @@ While continuously rotating the sonar, it publishes two types of messages:
 		uint16 speed_of_sound # [m/s]
 		uint8 range      #  range value [m]
 		uint8[] intensities    # intensity data [0-255].  This is the actual data received from the sonar
+	
+	This topic can be toggled using the **enableDataTopic** parameter.
 
 * **`/ping360_node/sonar/scan`** ([sensor_msgs/LaserScan])
 
@@ -105,6 +114,8 @@ While continuously rotating the sonar, it publishes two types of messages:
 
 		float32[] ranges         # calculated ranges that correspond to an intensity > threshold [m] 
 		float32[] intensities    # sensor intensity data [0-255]
+
+	This topic can be toggled using the **enableScanTopic** parameter.
 
 	Note: 
 	- ranges values < range_min or > range_max should be discarded
