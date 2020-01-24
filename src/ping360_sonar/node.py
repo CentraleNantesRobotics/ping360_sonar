@@ -152,8 +152,8 @@ def main():
                     intensities[index] = detectedIntensity
                     if debug:
                         print("Object at {} grad : {}m - intensity {}%".format(angle,
-                                                                            ranges[index],
-                                                                            float(intensities[index] * 100 / 255)))
+                                                                               ranges[index],
+                                                                               float(intensities[index] * 100 / 255)))
                     break
         # Contruct and publish Sonar scan msg
         scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
