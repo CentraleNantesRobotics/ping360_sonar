@@ -32,6 +32,9 @@ transmitDuration = None
 samplePeriod = None
 updated = False
 firstRequest = True
+enableImageTopic = False
+enableScanTopic = False
+enableDataTopic = False
 
 
 def callback(config, level):
@@ -60,7 +63,9 @@ def callback(config, level):
 
 def main():
     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
-        speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold
+        speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, \
+        enableDataTopic, enableImageTopic, enableScanTopic
+
     # Initialize node
     rospy.init_node('ping360_node')
 
@@ -78,6 +83,10 @@ def main():
         sonarRange, samplePeriod, speedOfSound)
     debug = rospy.get_param('~debug', True)
     threshold = int(rospy.get_param('~threshold', 200))  # 0-255
+
+    enableImageTopic = rospy.get_param('~enableImageTopic', True)
+    enableScanTopic = rospy.get_param('~enableScanTopic', True)
+    enableDataTopic = rospy.get_param('~enableDataTopic', True)
 
     # Output and ROS parameters
     step = int(rospy.get_param('~step', 1))
@@ -134,52 +143,55 @@ def main():
         data = getSonarData(sensor, angle)
 
         # Contruct and publish Sonar data msg
-        rawDataMsg = generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange)
-        rawPub.publish(rawDataMsg)
+        if enableDataTopic:
+            rawDataMsg = generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange)
+            rawPub.publish(rawDataMsg)
 
         # Prepare scan msg
-        index = int(round((angle * 2 * pi / 400) / angle_increment))
+        if enableScanTopic:
+            index = int(round((angle * 2 * pi / 400) / angle_increment))
 
-        # Get the first high intensity value
-        for detectedIntensity in data:
-            if detectedIntensity >= threshold:
-                detectedIndex = data.index(detectedIntensity)
-                # The index+1 represents the number of samples which then can be used to deduce the range
-                distance = calculateRange(
-                    (1 + detectedIndex), samplePeriod, speedOfSound)
-                if distance >= 0.75 and distance <= sonarRange:
-                    ranges[index] = distance
-                    intensities[index] = detectedIntensity
-                    if debug:
-                        print("Object at {} grad : {}m - intensity {}%".format(angle,
-                                                                               ranges[index],
-                                                                               float(intensities[index] * 100 / 255)))
-                    break
-        # Contruct and publish Sonar scan msg
-        scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
-        laserPub.publish(scanDataMsg)
+            # Get the first high intensity value
+            for detectedIntensity in data:
+                if detectedIntensity >= threshold:
+                    detectedIndex = data.index(detectedIntensity)
+                    # The index+1 represents the number of samples which then can be used to deduce the range
+                    distance = calculateRange(
+                        (1 + detectedIndex), samplePeriod, speedOfSound)
+                    if distance >= 0.75 and distance <= sonarRange:
+                        ranges[index] = distance
+                        intensities[index] = detectedIntensity
+                        if debug:
+                            print("Object at {} grad : {}m - {}%".format(angle,
+                                                                         ranges[index],
+                                                                         float(intensities[index] * 100 / 255)))
+                        break
+            # Contruct and publish Sonar scan msg
+            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
+            laserPub.publish(scanDataMsg)
 
         # Contruct and publish Sonar image msg
-        linear_factor = float(len(data)) / float(center[0])
-        try:
-            # TODO: check the updated polar logic on the new ping-viewer
-            for i in range(int(center[0])):
-                if(i < center[0]):
-                    pointColor = data[int(i * linear_factor - 1)]
-                else:
-                    pointColor = 0
-                for k in np.linspace(0, step, 8 * step):
-                    theta = 2 * pi * (angle + k) / 400.0
-                    x = float(i) * cos(theta)
-                    y = float(i) * sin(theta)
-                    image[int(center[0] + x)][int(center[1] + y)
-                                              ][0] = pointColor
-        except IndexError:
-            rospy.logwarn(
-                "IndexError: data response was empty, skipping this iteration..")
-            continue
+        if enableImageTopic:
+            linear_factor = float(len(data)) / float(center[0])
+            try:
+                # TODO: check the updated polar logic on the new ping-viewer
+                for i in range(int(center[0])):
+                    if(i < center[0]):
+                        pointColor = data[int(i * linear_factor - 1)]
+                    else:
+                        pointColor = 0
+                    for k in np.linspace(0, step, 8 * step):
+                        theta = 2 * pi * (angle + k) / 400.0
+                        x = float(i) * cos(theta)
+                        y = float(i) * sin(theta)
+                        image[int(center[0] + x)][int(center[1] + y)
+                                                  ][0] = pointColor
+            except IndexError:
+                rospy.logwarn(
+                    "IndexError: data response was empty, skipping this iteration..")
+                continue
 
-        publishImage(image, imagePub, bridge)
+            publishImage(image, imagePub, bridge)
 
         angle = (angle + step) % 400  # TODO: allow users to set a scan FOV
         rate.sleep()
