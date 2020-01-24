@@ -14,5 +14,8 @@
         <param name="speedOfSound" value="1500"/>
         <param name="queueSize" value="1"/>
         <param name="threshold" value="100"/>
+        <param name="enableImageTopic" value="True"/> 
+        <param name="enableScanTopic" value="True"/> 
+        <param name="enableDataTopic" value="True"/> 
     </node>
 </launch>
