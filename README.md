@@ -136,7 +136,7 @@ Please report bugs and request features using the [Issue Tracker](https://github
   <tr>
     <td align="center"><a href="https://github.com/Hameck"><img src="https://avatars2.githubusercontent.com/u/14954732?v=4" width="100px;" alt=""/><br /><sub><b>Henrique Martinez Rocamora</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Hameck" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Hameck" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://stormix.co"><img src="https://avatars2.githubusercontent.com/u/18377687?v=4" width="100px;" alt=""/><br /><sub><b>Anas Mazouni</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Stormiix" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Stormiix" title="Tests">⚠️</a></td>
-    <td align="center"><a href="https://github.com/tomlogan501"><img src="https://avatars3.githubusercontent.com/u/56969577?v=4" width="100px;" alt=""/><br /><sub><b>tomlogan501</b></sub></a><br /><a href="#ideas-tomlogan501" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/tomlogan501"><img src="https://avatars3.githubusercontent.com/u/56969577?v=4" width="100px;" alt=""/><br /><sub><b>tomlogan501</b></sub></a><br /><a href="#ideas-tomlogan501" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=tomlogan501" title="Tests">⚠️</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/issues?q=author%3Atomlogan501" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 

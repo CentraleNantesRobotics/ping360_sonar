@@ -31,12 +31,14 @@
       "avatar_url": "https://avatars3.githubusercontent.com/u/56969577?v=4",
       "profile": "https://github.com/tomlogan501",
       "contributions": [
-        "ideas"
+        "ideas",
+        "test",
+        "bug"
       ]
     }
   ],
   "contributorsPerLine": 7,
-  "projectName": "ping360_sonar_python",
+  "projectName": "ping360_sonar",
   "projectOwner": "CentraleNantesRobotics",
   "repoType": "github",
   "repoHost": "https://github.com",

@@ -139,20 +139,22 @@ def main():
 
         # Prepare scan msg
         index = int(round((angle * 2 * pi / 400) / angle_increment))
+
         # Get the first high intensity value
-        detectedIntensity = next((x for x in data if x >= threshold), None)
-        if detectedIntensity:
-            detectedIndex = data.index(detectedIntensity)
-            # The index+1 represents the number of samples which then can be used to deduce the range
-            distance = calculateRange(
-                (1 + detectedIndex), samplePeriod, speedOfSound)
-            if distance >= 0.75 and distance <= sonarRange:
-                ranges[index] = distance
-                intensities[index] = detectedIntensity
-                if debug:
-                    print("Object at {} grad : {}m - intensity {}%".format(angle,
-                                                                           ranges[index],
-                                                                           float(intensities[index] * 100 / 255)))
+        for detectedIntensity in data:
+            if detectedIntensity >= threshold:
+                detectedIndex = data.index(detectedIntensity)
+                # The index+1 represents the number of samples which then can be used to deduce the range
+                distance = calculateRange(
+                    (1 + detectedIndex), samplePeriod, speedOfSound)
+                if distance >= 0.75 and distance <= sonarRange:
+                    ranges[index] = distance
+                    intensities[index] = detectedIntensity
+                    if debug:
+                        print("Object at {} grad : {}m - intensity {}%".format(angle,
+                                                                               ranges[index],
+                                                                               float(intensities[index] * 100 / 255)))
+                    break
         # Contruct and publish Sonar scan msg
         scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
         laserPub.publish(scanDataMsg)
