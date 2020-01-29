@@ -4,6 +4,8 @@ import time
 import errno
 import math
 import numpy as np
+import random
+
 
 verbose = False
 payload_dict = definitions.payload_dict_all
@@ -182,7 +184,7 @@ class Serial:
 
     def generateRandomData(self):
         sigma = 10
-        mu = 100
+        mu = 100 + int(30.0 * math.sin((self._angle + random.randrange(40)) / 40.))
         self._data = "".join([chr(int(255 * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sigma, 2.)))))
                               for x in range(self._number_of_samples)])
 

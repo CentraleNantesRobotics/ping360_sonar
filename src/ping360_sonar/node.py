@@ -35,6 +35,7 @@ firstRequest = True
 enableImageTopic = False
 enableScanTopic = False
 enableDataTopic = False
+maxAngle = None
 
 
 def callback(config, level):
@@ -87,6 +88,7 @@ def main():
     enableImageTopic = rospy.get_param('~enableImageTopic', True)
     enableScanTopic = rospy.get_param('~enableScanTopic', True)
     enableDataTopic = rospy.get_param('~enableDataTopic', True)
+    maxAngle = rospy.get_param('~maxAngle', 400)
 
     # Output and ROS parameters
     step = int(rospy.get_param('~step', 1))
@@ -136,8 +138,8 @@ def main():
                               transmitDuration, samplePeriod, numberOfSamples)
 
             angle_increment = 2 * pi * step / 400
-            ranges = [0] * (400 // step)
-            intensities = [0] * (400 // step)
+            ranges = [0] * (maxAngle // step)
+            intensities = [0] * (maxAngle // step)
 
         # Get sonar response
         data = getSonarData(sensor, angle)
@@ -193,7 +195,7 @@ def main():
 
             publishImage(image, imagePub, bridge)
 
-        angle = (angle + step) % 400  # TODO: allow users to set a scan FOV
+        angle = (angle + step) % maxAngle
         rate.sleep()
 
 
