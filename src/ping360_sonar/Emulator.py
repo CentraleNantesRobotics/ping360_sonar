@@ -187,10 +187,11 @@ class Serial:
 
     def generateRandomData(self):
         sigma = 10
-        mu = 100 + int(self._noise[self._angle]) + random.randint(-1, 1)
 
-        if(self._angle == 399):
+        if(self._angle == 0):
             self._noise = perlin.noise(400, 50, 50)
+
+        mu = 100 + int(self._noise[self._angle]) + random.randint(-1, 1)
 
         self._data = "".join([chr(int(255 * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sigma, 2.)))))
                               for x in range(self._number_of_samples)])
