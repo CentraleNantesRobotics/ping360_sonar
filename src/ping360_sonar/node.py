@@ -12,8 +12,6 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
 from sensor_msgs.msg import PointField
 from sensor_msgs.msg import PointCloud2
-# from sensor_msgs import point_cloud2
-# from std_msgs.msg import Header
 import numpy_pc2
 
 from ping360_sonar.cfg import sonarConfig
@@ -39,6 +37,7 @@ samplePeriod = None
 updated = False
 firstRequest = True
 enableImageTopic = False
+enablePclTopic = False
 enableScanTopic = False
 enableDataTopic = False
 
@@ -70,7 +69,7 @@ def callback(config, level):
 def main():
     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
         speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, \
-        enableDataTopic, enableImageTopic, enableScanTopic
+        enableDataTopic, enableImageTopic, enableScanTopic, enablePclTopic
 
     # Initialize node
     rospy.init_node('ping360_node')
@@ -88,10 +87,10 @@ def main():
         sonarRange, samplePeriod, speedOfSound)
     debug = rospy.get_param('~debug', True)
     threshold = int(rospy.get_param('~threshold', 200))  # 0-255
-
     enableImageTopic = rospy.get_param('~enableImageTopic', True)
     enableScanTopic = rospy.get_param('~enableScanTopic', True)
     enableDataTopic = rospy.get_param('~enableDataTopic', True)
+    enablePclTopic = rospy.get_param('~enablePclTopic', True)
 
     # Output and ROS parameters
     step = int(rospy.get_param('~step', 1))
@@ -184,7 +183,7 @@ def main():
             laserPub.publish(scanDataMsg)
 
         # Contruct and publish Sonar image msg
-        if enableImageTopic:
+        if enableImageTopic or enablePclTopic:
             linear_factor = float(len(data)) / float(center[0])
             try:
                 # TODO: check the updated polar logic on the new ping-viewer
@@ -199,45 +198,23 @@ def main():
                         y = float(i) * sin(theta)
                         image[int(center[0] + x)][int(center[1] + y)
                                                   ][0] = pointColor
-                        points.append([x, y, 0, pointColor])
+                        x_world = x / float(center[0]) * float(sonarRange)
+                        y_world = y / float(center[0]) * float(sonarRange)
+                        points.append([x_world, y_world, float(pointColor) / 255.0 * 10.0, pointColor])
             except IndexError:
                 rospy.logwarn(
                     "IndexError: data response was empty, skipping this iteration..")
                 continue
 
-            pc2 = numpy_pc2.array_to_xyzi_pointcloud2f(points, rospy.Time.now(), "sonar_frame")
-            pclPub.publish(pc2)
-            publishImage(image, imagePub, bridge)
+            if enablePclTopic:
+                pc2 = numpy_pc2.array_to_xyzi_pointcloud2f(points, rospy.Time.now(), "sonar_frame")
+                pclPub.publish(pc2)
+
+            if enableImageTopic:
+                publishImage(image, imagePub, bridge)
 
         angle = (angle + step) % 400  # TODO: allow users to set a scan FOV
         rate.sleep()
-
-
-# def array_to_pointcloud2(cloud_arr, stamp=None, frame_id=None, merge_rgb=False):
-#     '''Converts a numpy record array to a sensor_msgs.msg.PointCloud2.
-#     '''
-#     if merge_rgb:
-#         cloud_arr = merge_rgb_fields(cloud_arr)
-
-#     # make it 2d (even if height will be 1)
-#     cloud_arr = np.atleast_2d(cloud_arr)
-
-#     cloud_msg = PointCloud2()
-
-#     if stamp is not None:
-#         cloud_msg.header.stamp = stamp
-#     if frame_id is not None:
-#         cloud_msg.header.frame_id = frame_id
-
-#     cloud_msg.height = cloud_arr.shape[0]
-#     cloud_msg.width = cloud_arr.shape[1]
-#     cloud_msg.fields = arr_to_fields(cloud_arr)
-#     cloud_msg.is_bigendian = False  # assumption
-#     cloud_msg.point_step = cloud_arr.dtype.itemsize
-#     cloud_msg.row_step = cloud_msg.point_step * cloud_arr.shape[1]
-#     cloud_msg.is_dense = all([np.isfinite(cloud_arr[fname]).all() for fname in cloud_arr.dtype.names])
-#     cloud_msg.data = cloud_arr.tostring()
-#     return cloud_msg
 
 
 def getSonarData(sensor, angle):
