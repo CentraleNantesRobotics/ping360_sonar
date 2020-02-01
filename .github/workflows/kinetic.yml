@@ -1,4 +1,4 @@
-name: ROS Kenetic CI
+name: ROS kinetic CI
 on: [push]
 jobs:    
   build:
@@ -11,15 +11,15 @@ jobs:
           cd / && ./ros_entrypoint.sh
           apt-get update
           apt-get install -y python-pip
-          apt-get install -y ros-melodic-catkin python-catkin-tools
-          apt-get install -y ros-melodic-cv-bridge
-          apt-get install -y ros-melodic-roslint
-          pip install bluerobotics-ping
+          apt-get install -y ros-kinetic-catkin python-catkin-tools
+          apt-get install -y ros-kinetic-cv-bridge
+          apt-get install -y ros-kinetic-roslint
+          pip install bluerobotics-kinetic
       - name: Setup catkin workspace
         run: |
           mkdir -p ~/catkin_ws/src
           cd ~/catkin_ws
-          /bin/bash -c "source /opt/ros/melodic/setup.bash && catkin build" 
+          /bin/bash -c "source /opt/ros/kinetic/setup.bash && catkin build" 
           
       - name: Build package
         run: |

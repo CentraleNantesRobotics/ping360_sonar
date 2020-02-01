@@ -1,4 +1,4 @@
-name: ROS CI
+name: ROS melodic CI
 on: [push]
 jobs:    
   build:
