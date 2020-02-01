@@ -12,18 +12,20 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             return context.payload.ref.replace(/\/refs\/tags\//, '');
-      - name: Echo
+      - name: Echo version
         run: echo ${{ steps.tag.outputs.result }}
       - name: Create local changes
         run: |
           ls -lart
           python3 helper/clean.py
+          python3 helper/bump.py ${{ steps.tag.outputs.result }}
       - name: Commit files
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git commit -m "Automated release changes" -a
       - name: Push changes
+        if: github.ref == 'refs/heads/master'
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
