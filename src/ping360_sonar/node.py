@@ -4,11 +4,17 @@ from math import cos, pi, sin
 
 import numpy as np
 import rospy
+# import struct
 
 from cv_bridge import CvBridge, CvBridgeError
 from dynamic_reconfigure.server import Server
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import PointField
+from sensor_msgs.msg import PointCloud2
+# from sensor_msgs import point_cloud2
+# from std_msgs.msg import Header
+import numpy_pc2
 
 from ping360_sonar.cfg import sonarConfig
 from ping360_sonar.msg import SonarEcho
@@ -74,8 +80,7 @@ def main():
     baudrate = rospy.get_param('~baudrate', 115200)
     gain = rospy.get_param('~gain', 0)
     numberOfSamples = rospy.get_param('~numberOfSamples', 200)  # Number of points
-    transmitFrequency = rospy.get_param(
-        '~transmitFrequency', 740)  # Default frequency
+    transmitFrequency = rospy.get_param('~transmitFrequency', 740)  # Default frequency
     sonarRange = rospy.get_param('~sonarRange', 1)  # in m
     speedOfSound = rospy.get_param('~speedOfSound', 1500)  # in m/s
     samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
@@ -111,6 +116,13 @@ def main():
                              SonarEcho, queue_size=queue_size)
     laserPub = rospy.Publisher(
         "/ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
+    pclPub = rospy.Publisher("/ping360_node/sonar/point_cloud2", PointCloud2, queue_size=queue_size)
+
+    fields = [PointField('x', 0, PointField.FLOAT32, 1),
+              PointField('y', 4, PointField.FLOAT32, 1),
+              PointField('z', 8, PointField.FLOAT32, 1),
+              PointField('intensity', 12, PointField.UINT8, 1),
+              ]
 
     # Initialize and configure the sonar
     updateSonarConfig(sensor, gain, transmitFrequency,
@@ -128,6 +140,7 @@ def main():
     center = (float(imgSize / 2), float(imgSize / 2))
 
     rate = rospy.Rate(100)  # 100hz
+    points = []
 
     while not rospy.is_shutdown():
         # Update to the latest config data
@@ -186,15 +199,45 @@ def main():
                         y = float(i) * sin(theta)
                         image[int(center[0] + x)][int(center[1] + y)
                                                   ][0] = pointColor
+                        points.append([x, y, 0, pointColor])
             except IndexError:
                 rospy.logwarn(
                     "IndexError: data response was empty, skipping this iteration..")
                 continue
 
+            pc2 = numpy_pc2.array_to_xyzi_pointcloud2f(points, rospy.Time.now(), "sonar_frame")
+            pclPub.publish(pc2)
             publishImage(image, imagePub, bridge)
 
         angle = (angle + step) % 400  # TODO: allow users to set a scan FOV
         rate.sleep()
+
+
+# def array_to_pointcloud2(cloud_arr, stamp=None, frame_id=None, merge_rgb=False):
+#     '''Converts a numpy record array to a sensor_msgs.msg.PointCloud2.
+#     '''
+#     if merge_rgb:
+#         cloud_arr = merge_rgb_fields(cloud_arr)
+
+#     # make it 2d (even if height will be 1)
+#     cloud_arr = np.atleast_2d(cloud_arr)
+
+#     cloud_msg = PointCloud2()
+
+#     if stamp is not None:
+#         cloud_msg.header.stamp = stamp
+#     if frame_id is not None:
+#         cloud_msg.header.frame_id = frame_id
+
+#     cloud_msg.height = cloud_arr.shape[0]
+#     cloud_msg.width = cloud_arr.shape[1]
+#     cloud_msg.fields = arr_to_fields(cloud_arr)
+#     cloud_msg.is_bigendian = False  # assumption
+#     cloud_msg.point_step = cloud_arr.dtype.itemsize
+#     cloud_msg.row_step = cloud_msg.point_step * cloud_arr.shape[1]
+#     cloud_msg.is_dense = all([np.isfinite(cloud_arr[fname]).all() for fname in cloud_arr.dtype.names])
+#     cloud_msg.data = cloud_arr.tostring()
+#     return cloud_msg
 
 
 def getSonarData(sensor, angle):
