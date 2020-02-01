@@ -14,7 +14,7 @@ jobs:
           apt-get install -y ros-kinetic-catkin python-catkin-tools
           apt-get install -y ros-kinetic-cv-bridge
           apt-get install -y ros-kinetic-roslint
-          pip install bluerobotics-kinetic
+          pip install bluerobotics-ping
       - name: Setup catkin workspace
         run: |
           mkdir -p ~/catkin_ws/src
