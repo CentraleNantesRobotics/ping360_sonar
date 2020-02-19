@@ -123,9 +123,9 @@ def main():
     image = np.zeros((imgSize, imgSize, 1), np.uint8)
 
     # Initial the LaserScan Intensities & Ranges
-    angle_increment = 2 * pi * step / 400
-    ranges = [0] * (400 // step)
-    intensities = [0] * (400 // step)
+    angle_increment = 2 * pi * step / maxAngle
+    ranges = [0] * (maxAngle // step)
+    intensities = [0] * (maxAngle // step)
 
     # Center point coordinates
     center = (float(imgSize / 2), float(imgSize / 2))
@@ -138,9 +138,9 @@ def main():
             updateSonarConfig(sensor, gain, transmitFrequency,
                               transmitDuration, samplePeriod, numberOfSamples)
 
-            angle_increment = 2 * pi * step / 400
-            ranges = [0] * (400 // step)
-            intensities = [0] * (400 // step)
+            angle_increment = 2 * pi * step / maxAngle
+            ranges = [0] * (maxAngle // step)
+            intensities = [0] * (maxAngle // step)
 
         # Get sonar response
         data = getSonarData(sensor, angle)
@@ -152,7 +152,7 @@ def main():
 
         # Prepare scan msg
         if enableScanTopic:
-            index = int(round((angle * 2 * pi / 400) / angle_increment))
+            index = int(round((angle * 2 * pi / maxAngle) / angle_increment))
 
             # Get the first high intensity value
             for detectedIntensity in data:
@@ -170,7 +170,7 @@ def main():
                                                                          float(intensities[index] * 100 / 255)))
                         break
             # Contruct and publish Sonar scan msg
-            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
+            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step, maxAngle)
             laserPub.publish(scanDataMsg)
 
         # Contruct and publish Sonar image msg
@@ -184,7 +184,7 @@ def main():
                     else:
                         pointColor = 0
                     for k in np.linspace(0, step, 8 * step):
-                        theta = 2 * pi * (angle + k) / 400.0
+                        theta = 2 * pi * (angle + k) / float(maxAngle)
                         x = float(i) * cos(theta)
                         y = float(i) * sin(theta)
                         image[int(center[0] + x)][int(center[1] + y)
@@ -241,7 +241,7 @@ def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedO
     return msg
 
 
-def generateScanMsg(ranges, intensities, sonarRange, step):
+def generateScanMsg(ranges, intensities, sonarRange, step, maxAngle):
     """
     Generates the laserScan message for the scan topic
     Args:
@@ -255,7 +255,7 @@ def generateScanMsg(ranges, intensities, sonarRange, step):
     msg.header.frame_id = 'sonar_frame'
     msg.angle_min = 0
     msg.angle_max = 2 * pi
-    msg.angle_increment = 2 * pi * step / 400
+    msg.angle_increment = 2 * pi * step / maxAngle
     msg.time_increment = 0
     msg.range_min = .75
     msg.range_max = sonarRange
