@@ -1,32 +1,52 @@
 name: Release
-on: [push]
+on:
+  push:
+    tags:
+      - '*.*.*'
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
       - name: Extract tag name
-        id: tag
-        uses: actions/github-script@0.2.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            return context.payload.ref.replace(/\/refs\/tags\//, '');
+        run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:10}
       - name: Echo version
-        run: echo ${{ steps.tag.outputs.result }}
-      - name: Create local changes
+        run: echo ${{ env.RELEASE_VERSION }}
+      - name: Bump package version
         run: |
-          ls -lart
-          python3 helper/clean.py
-          python3 helper/bump.py ${{ steps.tag.outputs.result }}
+          python3 helper/bump.py ${{ env.RELEASE_VERSION }}
       - name: Commit files
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git commit -m "Automated release changes" -a
+          git commit -m "Bump package version" -a
       - name: Push changes
-        if: github.ref == 'refs/heads/master'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: master
+      - name: Prepare release
+        run: |
+          python3 helper/clean.py
+      - name: Commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "Auto-remove roslint" -a
+      - name: Push changes
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: release
+
+
+
+
+
+
+
+
+
+
+          
+
