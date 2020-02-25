@@ -35,6 +35,8 @@ firstRequest = True
 enableImageTopic = False
 enableScanTopic = False
 enableDataTopic = False
+maxAngle = None
+minAngle = None
 
 
 def callback(config, level):
@@ -88,10 +90,36 @@ def main():
     enableScanTopic = rospy.get_param('~enableScanTopic', True)
     enableDataTopic = rospy.get_param('~enableDataTopic', True)
 
+    maxAngle = int(rospy.get_param('~maxAngle', 400))  # 0-400
+    minAngle = int(rospy.get_param('~minAngle', 0))  # 0-400
+    FOV = maxAngle - minAngle  # The sonars field of view
+
     # Output and ROS parameters
     step = int(rospy.get_param('~step', 1))
     imgSize = int(rospy.get_param('~imgSize', 500))
     queue_size = int(rospy.get_param('~queueSize', 1))
+
+    # TODO: improve configuration validation
+    if FOV <= 0:
+        rospy.logerr(
+            """
+            minAngle should be inferior to the maxAngle!
+            Current settings:
+                minAngle: {} - maxAngle: {}""".format(maxAngle, minAngle))
+        rospy.signal_shutdown("Bad minAngle & maxAngle values")
+        return
+
+    if step >= FOV:
+        rospy.logerr(
+            """
+            The configured step is bigger then the set FOV (maxAngle - minAngle)
+            Current settings:
+                step: {} - minAngle: {} - maxAngle: {} - FOV: {}""".format(step,
+                                                                           maxAngle,
+                                                                           minAngle,
+                                                                           FOV))
+        rospy.signal_shutdown("Bad minAngle & maxAngle or step values")
+        return
 
     # Initialize sensor
     sensor = Ping360(device, baudrate)
@@ -101,7 +129,7 @@ def main():
     srv = Server(sonarConfig, callback)
 
     # Global Variables
-    angle = 0
+    angle = minAngle
     bridge = CvBridge()
 
     # Topic publishers
@@ -121,8 +149,8 @@ def main():
 
     # Initial the LaserScan Intensities & Ranges
     angle_increment = 2 * pi * step / 400
-    ranges = [0] * (400 // step)
-    intensities = [0] * (400 // step)
+    ranges = [0] * (FOV // step)
+    intensities = [0] * (FOV // step)
 
     # Center point coordinates
     center = (float(imgSize / 2), float(imgSize / 2))
@@ -136,8 +164,8 @@ def main():
                               transmitDuration, samplePeriod, numberOfSamples)
 
             angle_increment = 2 * pi * step / 400
-            ranges = [0] * (400 // step)
-            intensities = [0] * (400 // step)
+            ranges = [0] * (FOV // step)
+            intensities = [0] * (FOV // step)
 
         # Get sonar response
         data = getSonarData(sensor, angle)
@@ -149,8 +177,7 @@ def main():
 
         # Prepare scan msg
         if enableScanTopic:
-            index = int(round((angle * 2 * pi / 400) / angle_increment))
-
+            index = int(((angle - minAngle) * 2 * pi / 400) / angle_increment)
             # Get the first high intensity value
             for detectedIntensity in data:
                 if detectedIntensity >= threshold:
@@ -167,14 +194,13 @@ def main():
                                                                          float(intensities[index] * 100 / 255)))
                         break
             # Contruct and publish Sonar scan msg
-            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
+            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle)
             laserPub.publish(scanDataMsg)
 
         # Contruct and publish Sonar image msg
         if enableImageTopic:
             linear_factor = float(len(data)) / float(center[0])
             try:
-                # TODO: check the updated polar logic on the new ping-viewer
                 for i in range(int(center[0])):
                     if(i < center[0]):
                         pointColor = data[int(i * linear_factor - 1)]
@@ -193,7 +219,8 @@ def main():
 
             publishImage(image, imagePub, bridge)
 
-        angle = (angle + step) % 400  # TODO: allow users to set a scan FOV
+        angle += step
+        angle = minAngle if angle >= maxAngle else angle
         rate.sleep()
 
 
@@ -238,7 +265,7 @@ def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedO
     return msg
 
 
-def generateScanMsg(ranges, intensities, sonarRange, step):
+def generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle):
     """
     Generates the laserScan message for the scan topic
     Args:
@@ -250,8 +277,8 @@ def generateScanMsg(ranges, intensities, sonarRange, step):
     msg = LaserScan()
     msg.header.stamp = rospy.Time.now()
     msg.header.frame_id = 'sonar_frame'
-    msg.angle_min = 0
-    msg.angle_max = 2 * pi
+    msg.angle_min = 2 * pi * minAngle / 400
+    msg.angle_max = 2 * pi * maxAngle / 400
     msg.angle_increment = 2 * pi * step / 400
     msg.time_increment = 0
     msg.range_min = .75

@@ -18,5 +18,6 @@
         <param name="enableScanTopic" value="True"/> 
         <param name="enableDataTopic" value="True"/> 
         <param name="maxAngle" value="400"/> 
+        <param name="minAngle" value="0"/> 
     </node>
 </launch>
