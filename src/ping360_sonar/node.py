@@ -178,7 +178,6 @@ def main():
         # Prepare scan msg
         if enableScanTopic:
             index = int(((angle - minAngle) * 2 * pi / 400) / angle_increment)
-            print(index, len(ranges), ranges)
             # Get the first high intensity value
             for detectedIntensity in data:
                 if detectedIntensity >= threshold:
@@ -195,7 +194,7 @@ def main():
                                                                          float(intensities[index] * 100 / 255)))
                         break
             # Contruct and publish Sonar scan msg
-            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step)
+            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle)
             laserPub.publish(scanDataMsg)
 
         # Contruct and publish Sonar image msg
