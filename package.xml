@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <package format="2">
   <name>ping360_sonar</name>
-  <version>1.3.0</version> 
+  <version>1.3.2</version> 
   <description>A ROS package for Blue Robotics Ping360 Sonar</description>
 
   <url type="website">http://wiki.ros.org/ping360_sonar</url>
