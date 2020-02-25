@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+        with:
+          fetch-depth: 0
       - name: Extract tag name
         run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:10}
       - name: Echo version
