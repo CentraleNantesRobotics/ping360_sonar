@@ -19,5 +19,6 @@
         <param name="enableDataTopic" value="True"/> 
         <param name="maxAngle" value="400"/> 
         <param name="minAngle" value="0"/> 
+        <param name="oscillate" value="True"/> 
     </node>
 </launch>

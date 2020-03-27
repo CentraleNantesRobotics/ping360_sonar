@@ -37,6 +37,7 @@ enableScanTopic = False
 enableDataTopic = False
 maxAngle = None
 minAngle = None
+oscillate = None
 
 
 def callback(config, level):
@@ -66,7 +67,7 @@ def callback(config, level):
 def main():
     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
         speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, \
-        enableDataTopic, enableImageTopic, enableScanTopic
+        enableDataTopic, enableImageTopic, enableScanTopic, oscillate
 
     # Initialize node
     rospy.init_node('ping360_node')
@@ -93,6 +94,8 @@ def main():
     maxAngle = int(rospy.get_param('~maxAngle', 400))  # 0-400
     minAngle = int(rospy.get_param('~minAngle', 0))  # 0-400
     FOV = maxAngle - minAngle  # The sonars field of view
+    oscillate = int(rospy.get_param('~oscillate', True))
+    sign = 1
 
     # Output and ROS parameters
     step = int(rospy.get_param('~step', 1))
@@ -219,8 +222,18 @@ def main():
 
             publishImage(image, imagePub, bridge)
 
-        angle += step
-        angle = minAngle if angle >= maxAngle else angle
+        angle += sign * step
+        if angle > maxAngle:
+            if not oscillate:
+                angle = minAngle
+            else:
+                angle = maxAngle
+                sign = -1
+
+        if angle < minAngle and oscillate:
+            sign = 1
+            angle = minAngle
+
         rate.sleep()
 
 
