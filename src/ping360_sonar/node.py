@@ -151,7 +151,6 @@ def main():
     image = np.zeros((imgSize, imgSize, 1), np.uint8)
 
     # Initial the LaserScan Intensities & Ranges
-    angle_increment = 2 * pi * step / 400
     ranges = [0]
     intensities = [0]
 
@@ -165,9 +164,6 @@ def main():
         if updated:
             updateSonarConfig(sensor, gain, transmitFrequency,
                               transmitDuration, samplePeriod, numberOfSamples)
-
-            angle_increment = 2 * pi * step / 400
-
         # Get sonar response
         data = getSonarData(sensor, angle)
 
@@ -220,14 +216,14 @@ def main():
             publishImage(image, imagePub, bridge)
 
         angle += sign * step
-        if angle > maxAngle:
+        if angle >= maxAngle:
             if not oscillate:
                 angle = minAngle
             else:
                 angle = maxAngle
                 sign = -1
 
-        if angle < minAngle and oscillate:
+        if angle <= minAngle and oscillate:
             sign = 1
             angle = minAngle
 

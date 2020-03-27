@@ -68,19 +68,24 @@ Run the main node with:
 
 ![alt img](https://github.com/CentraleNantesRobotics/ping360_sonar/blob/master/img/print.png)
 
-	
-    Three extra parameters can be set to toggle specific topics, they are set to true by default.
-	
-        <param name="enableImageTopic" value="True"/> 
-        <param name="enableScanTopic" value="True"/> 
-        <param name="enableDataTopic" value="True"/>
 
-	By default, the sensor does a full 360° rotation, but that can be changed by modifying the min and max scan angle values.
+Three extra parameters can be set to toggle specific topics, they are set to true by default.
+	
+        <param name="enableImageTopic" value="True or False"/> 
+        <param name="enableScanTopic" value="True or False"/> 
+        <param name="enableDataTopic" value="True or False"/>
+
+By default, the sensor does a full 360° rotation, but that can be changed by modifying the min and max scan angle values.
 
         <param name="minAngle" value="0"/> 
         <param name="maxAngle" value="400"/> 
-	
-	Please note that these angle value are in GRAD and not DEG.
+
+Please note that these angle value are in GRAD and not DEG.
+
+You can also enable or disable the sensor oscillation by setting the **oscillate** parameter.
+
+        <param name="oscillate" value="True or False"/> 
+
 	
 ## Nodes
 
