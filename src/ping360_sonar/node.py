@@ -151,9 +151,8 @@ def main():
     image = np.zeros((imgSize, imgSize, 1), np.uint8)
 
     # Initial the LaserScan Intensities & Ranges
-    angle_increment = 2 * pi * step / 400
-    ranges = [0] * (FOV // step)
-    intensities = [0] * (FOV // step)
+    ranges = [0]
+    intensities = [0]
 
     # Center point coordinates
     center = (float(imgSize / 2), float(imgSize / 2))
@@ -165,11 +164,6 @@ def main():
         if updated:
             updateSonarConfig(sensor, gain, transmitFrequency,
                               transmitDuration, samplePeriod, numberOfSamples)
-
-            angle_increment = 2 * pi * step / 400
-            ranges = [0] * (FOV // step)
-            intensities = [0] * (FOV // step)
-
         # Get sonar response
         data = getSonarData(sensor, angle)
 
@@ -180,7 +174,6 @@ def main():
 
         # Prepare scan msg
         if enableScanTopic:
-            index = int(((angle - minAngle) * 2 * pi / 400) / angle_increment)
             # Get the first high intensity value
             for detectedIntensity in data:
                 if detectedIntensity >= threshold:
@@ -189,12 +182,12 @@ def main():
                     distance = calculateRange(
                         (1 + detectedIndex), samplePeriod, speedOfSound)
                     if distance >= 0.75 and distance <= sonarRange:
-                        ranges[index] = distance
-                        intensities[index] = detectedIntensity
+                        ranges[0] = distance
+                        intensities[0] = detectedIntensity
                         if debug:
                             print("Object at {} grad : {}m - {}%".format(angle,
-                                                                         ranges[index],
-                                                                         float(intensities[index] * 100 / 255)))
+                                                                         ranges[0],
+                                                                         float(intensities[0] * 100 / 255)))
                         break
             # Contruct and publish Sonar scan msg
             scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle)
@@ -223,14 +216,14 @@ def main():
             publishImage(image, imagePub, bridge)
 
         angle += sign * step
-        if angle > maxAngle:
+        if angle >= maxAngle:
             if not oscillate:
                 angle = minAngle
             else:
                 angle = maxAngle
                 sign = -1
 
-        if angle < minAngle and oscillate:
+        if angle <= minAngle and oscillate:
             sign = 1
             angle = minAngle
 
