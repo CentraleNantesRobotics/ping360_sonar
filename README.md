@@ -37,6 +37,8 @@ Before building from source, install [ping-protocol python lib](https://pypi.org
 
 	pip install bluerobotics-ping
 
+**!Headsup! B.R. just updated their package with some breaking changes, make you sure you use version *0.0.9* for now.**
+
 To build from source, clone the latest version from this repository into your catkin workspace and compile the package using
 
 	cd catkin_workspace/src
