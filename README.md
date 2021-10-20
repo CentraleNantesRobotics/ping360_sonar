@@ -9,9 +9,9 @@
 [![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
 ## Overview
 
-A python ROS package for the [BlueRobotics] [Ping360] Sonar. The package has been tested under [ROS] melodic and Ubuntu 16.04. This code is mostly experimental, expect that it changes often.
+A ROS 2 package for the [BlueRobotics] [Ping360] Sonar. This code is being developped for Foxy.
 
-**Keywords:** ROS, package, ping360, ping360 emulator
+**Keywords:** ROS 2, package, ping360, ping360 emulator
 
 ### License
 
@@ -19,36 +19,26 @@ The source code is released under a [MIT license](LICENSE).
 
 ## Installation
 
-### Download the latest release
+<!--### Download the latest release
 
-Get the latest stable release [here](https://github.com/CentraleNantesRobotics/ping360_sonar/releases/latest).
+Get the latest stable release [here](https://github.com/CentraleNantesRobotics/ping360_sonar/releases/latest).-->
 
 ### Building from Source
 
 #### Dependencies
 
 - [Robot Operating System (ROS)](http://wiki.ros.org) (middleware for robotics),
-- OpenCV
 - [cv_bridge]
 
 #### Building
 
-Before building from source, install [ping-protocol python lib](https://pypi.org/project/bluerobotics-ping/):
+Clone with `--recursive` in order to get the necessary `ping-cpp` library:
 
-	pip install bluerobotics-ping
+	cd ros2_workspace/src
+	git clone https://github.com/CentraleNantesRobotics/ping360_sonar.git -b ros2 --recursive
+	cd ../..
+	colcon build --symlink-install --packages-select ping360_sonar
 
-**!Headsup! B.R. just updated their package with some breaking changes, make you sure you use version *0.0.9* for now.**
-
-To build from source, clone the latest version from this repository into your catkin workspace and compile the package using
-
-	cd catkin_workspace/src
-	git clone https://github.com/CentraleNantesRobotics/ping360_sonar.git
-	cd ../
-	catkin build
-
-### Unit Tests
-
-TODO
 
 ## Usage
 
