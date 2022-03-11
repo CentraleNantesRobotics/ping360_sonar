@@ -1,4 +1,0 @@
-[submodule "src/ping-cpp"]
-	path = src/ping-cpp
-	url = https://github.com/CentraleNantesROV/ping-cpp.git
-	branch = deployment
