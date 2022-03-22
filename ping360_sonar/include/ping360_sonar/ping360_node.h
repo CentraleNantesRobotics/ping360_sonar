@@ -14,7 +14,7 @@ namespace ping360_sonar
 class Ping360Sonar : public rclcpp::Node
 {
 public:
-  Ping360Sonar(rclcpp::NodeOptions options);
+  Ping360Sonar(rclcpp::NodeOptions options = rclcpp::NodeOptions());
 
 
 private:

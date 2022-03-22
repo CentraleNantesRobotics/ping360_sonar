@@ -16,11 +16,13 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options) : Node("ping360", option
 }
 
 
-
-
 }
 
-
-
-#include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(ping360_sonar::Ping360Sonar)
+// boilerplate main
+int main(int argc, char** argv)
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<ping360_sonar::Ping360Sonar>());
+  rclcpp::shutdown();
+  return 0;
+}

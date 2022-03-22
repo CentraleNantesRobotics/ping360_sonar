@@ -20,17 +20,13 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
 # build BlueRobotics lib standalone    
-add_subdirectory(src/ping-cpp/src)
+add_subdirectory(src)
 
 # main code is a node lib
-add_library(ping360_node SHARED src/ping360_node.cpp src/ping360.cpp)
+add_executable(ping360_node src/ping360_node.cpp src/ping360.cpp)
 target_include_directories(ping360_node PRIVATE include src/ping-cpp/src)
 target_link_libraries(ping360_node ping-cpp)
 ament_target_dependencies(ping360_node rclcpp sensor_msgs cv_bridge ping360_sonar_msgs)
-
-rclcpp_components_register_node(ping360_node
-  PLUGIN "ping360_sonar::Ping360Sonar"
-  EXECUTABLE ping360)
   
 # Install
 ament_python_install_package(${PROJECT_NAME})
