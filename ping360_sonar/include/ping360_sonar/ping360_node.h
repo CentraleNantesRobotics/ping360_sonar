@@ -95,7 +95,7 @@ private:
   std::string _device = declare_parameter<std::string>("device", "/dev/ttyUSB0");
 
   //get booleens
-  bool _debug = declare_parameter<bool>("debug", true);
+  bool _debug = declare_parameter<bool>("debug", false);
   bool _enable_image_topic = declare_parameter<int>("enableImageTopic", true);
   bool _enable_scan_topic = declare_parameter<bool>("enableScanTopic", true);
   bool _enable_data_topic = declare_parameter<bool>("enableDataTopic", true);
@@ -120,10 +120,10 @@ private:
   SerialLink _link = SerialLink(_device, _baudrate);
   Ping360 _sensor = Ping360(_link);
 
-  rclcpp::TimerBase::SharedPtr timer_ = this->create_wall_timer(10ms, std::bind(&Ping360Sonar::timerCallback, this));
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_node/sonar/images", _queue_size);
-  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360_node/sonar/scan", _queue_size);
-  rclcpp::Publisher<ping360_sonar_msgs::msg::SonarEcho>::SharedPtr _data_publisher = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("/ping360_node/sonar/data", _queue_size);
+  rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _image_publisher;
+  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr _scan_publisher;
+  rclcpp::Publisher<ping360_sonar_msgs::msg::SonarEcho>::SharedPtr _data_publisher;
 
 };
 }
