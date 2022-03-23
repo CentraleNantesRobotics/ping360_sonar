@@ -1,0 +1,4 @@
+[submodule "ping360_sonar/src/ping-cpp"]
+	path = ping360_sonar/src/ping-cpp
+	url = https://github.com/GSO-soslab/ping-cpp.git
+	branch = deployment
