@@ -19,6 +19,7 @@
   
   <depend>cv_bridge</depend>
   <depend>rclcpp</depend>
+  <depend>rclcpy</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>ping360_sonar_msgs</depend>
