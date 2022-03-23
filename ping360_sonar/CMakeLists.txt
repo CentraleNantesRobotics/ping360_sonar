@@ -22,7 +22,7 @@ find_package(rclcpp_components REQUIRED)
 # build BlueRobotics lib standalone    
 add_subdirectory(src)
 
-# main code is a node lib
+# main code is a node class + standalone executable
 add_executable(ping360_node src/ping360_node.cpp src/ping360.cpp)
 target_include_directories(ping360_node PRIVATE include src/ping-cpp/src)
 target_link_libraries(ping360_node ping-cpp)

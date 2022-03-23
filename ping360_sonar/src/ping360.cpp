@@ -1,19 +1,11 @@
-#include <ping360_sonar/ping360.h>
+#include <ping360_sonar/ping360_node.h>
+#include <rclcpp/rclcpp.hpp>
 
-
-// to be adapted from src/ping360-viewer
-
-namespace ping360_sonar
+// boilerplate main
+int main(int argc, char** argv)
 {
-
-
-Ping360::Ping360()
-{
-
-}
-
-
-
-
-
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<ping360_sonar::Ping360Sonar>());
+  rclcpp::shutdown();
+  return 0;
 }

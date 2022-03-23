@@ -3,26 +3,19 @@
 #include <ping360_sonar/ping360_node.h>
 
 using namespace std::chrono_literals;
+using namespace ping360_sonar;
 
-namespace ping360_sonar
-{
 
-Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options) : Node("ping360", options)
-{
+
+Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
+  : Node("ping360", options),
+    link(declare_parameter<std::string>("port", "/dev/ttyUSB0"),
+         declare_parameter<int>("baudrate", 115200U)),
+    sonar(link)
+{ 
 
 
 
 
 }
 
-
-}
-
-// boilerplate main
-int main(int argc, char** argv)
-{
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<ping360_sonar::Ping360Sonar>());
-  rclcpp::shutdown();
-  return 0;
-}

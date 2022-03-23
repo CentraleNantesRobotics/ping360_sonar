@@ -4,7 +4,8 @@
 // basic node to begin the project
 
 #include <rclcpp/rclcpp.hpp>
-#include <ping360_sonar/ping360.h>
+#include <device/ping-device-ping360.h>
+#include <hal/link/desktop/serial-link.h>
 
 using namespace std::chrono_literals;
 
@@ -19,7 +20,8 @@ public:
 
 private:
 
-  // sonar i/o
+  // sonar i/o  
+  SerialLink link;
   Ping360 sonar;
 
   // ROS i/o
