@@ -16,7 +16,6 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(ping360_sonar_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
 # build BlueRobotics lib standalone    
