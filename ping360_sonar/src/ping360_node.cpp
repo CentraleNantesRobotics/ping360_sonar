@@ -122,11 +122,6 @@ sensor_msgs::msg::Image Ping360Sonar::generateImageMsg()
     }
 
     _cv_bridge.toImageMsg(msg);
-    msg.header.set__stamp(now());
-    msg.header.set__frame_id(_frame_id);
-    msg.set__encoding(sensor_msgs::image_encodings::TYPE_8UC1);
-    msg.set__width(_img_size);
-    msg.set__height(_img_size);
 
     return (msg);
 };
