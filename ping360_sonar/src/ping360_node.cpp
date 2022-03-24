@@ -14,16 +14,22 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
 { 
     updateSonarConfig();
+    if(_sensor.initialize())
+    {
+        RCLCPP_INFO(get_logger(),"connected");
 
-    std::cout << _sensor.initialize()<< std::endl;
+        _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_images", _queue_size);
+        _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360scan", _queue_size);
+        _data_publisher = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("/ping360_data", _queue_size);
 
-    _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_images", _queue_size);
-    _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360scan", _queue_size);
-    _data_publisher = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("/ping360_data", _queue_size);
+        timer_ = this->create_wall_timer(10ms, std::bind(&Ping360Sonar::timerCallback, this));
 
-    timer_ = this->create_wall_timer(10ms, std::bind(&Ping360Sonar::timerCallback, this));
-
-    _cv_bridge.image = cv::Mat(_img_size, _img_size, CV_8UC1, cv::Scalar(0));
+        _cv_bridge.image = cv::Mat(_img_size, _img_size, CV_8UC1, cv::Scalar(0));
+    }
+    else
+    {
+        RCLCPP_ERROR(get_logger(),"failed to connect");
+    }
 }
 
 void Ping360Sonar::getSonarData()
