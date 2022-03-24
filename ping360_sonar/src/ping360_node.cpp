@@ -19,7 +19,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
         RCLCPP_INFO(get_logger(),"connected");
 
         _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_images", _queue_size);
-        _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360scan", _queue_size);
+        _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360_scan", _queue_size);
         _data_publisher = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("/ping360_data", _queue_size);
 
         timer_ = this->create_wall_timer(10ms, std::bind(&Ping360Sonar::timerCallback, this));
