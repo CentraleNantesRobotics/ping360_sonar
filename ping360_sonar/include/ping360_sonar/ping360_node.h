@@ -93,6 +93,7 @@ private:
 
   //get strings
   std::string _device = declare_parameter<std::string>("device", "/dev/ttyUSB0");
+  std::string _frame_id = declare_parameter<std::string>("frameID", "sonar_frame");
 
   //get booleens
   bool _debug = declare_parameter<bool>("debug", false);
@@ -101,6 +102,7 @@ private:
   bool _enable_data_topic = declare_parameter<bool>("enableDataTopic", true);
   bool _oscillate = declare_parameter<bool>("oscillate", true);
 
+  //declare and compute other variables
   bool _updated = true;
   int _angle = _min_angle;
   int _sign = 1;
@@ -115,11 +117,10 @@ private:
   cv::Point _center = cv::Point(float(_img_size/2), float(_img_size/2));
 
   // sonar i/o
-
-  // sonar i/o
   SerialLink _link = SerialLink(_device, _baudrate);
   Ping360 _sensor = Ping360(_link);
 
+  // ROS i/o
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _image_publisher;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr _scan_publisher;

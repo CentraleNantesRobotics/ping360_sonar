@@ -42,7 +42,8 @@ class Ping360_node(Node):
         self.ParametersDouble = {
         }
         self.ParametersString = {
-            'device': "/dev/ttyUSB0"
+            'device': "/dev/ttyUSB0",
+            'frameID': "somar_frame"
         }
         self.ParametersBool = {
             'debug': False,
@@ -165,7 +166,7 @@ class Ping360_node(Node):
         """
         msg = SonarEcho()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'sonar_frame'
+        msg.header.frame_id = self._frameID
         msg.angle = float(self._angle)
         msg.gain = self._gain
         msg.number_of_samples = self._numberOfSamples
@@ -185,7 +186,7 @@ class Ping360_node(Node):
         """
         msg = LaserScan()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'sonar_frame'
+        msg.header.frame_id = self._frameID
         msg.angle_min = 2 * pi * self._minAngle / 400
         msg.angle_max = 2 * pi * self._maxAngle / 400
         msg.angle_increment = 2 * pi * self._step / 400
