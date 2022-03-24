@@ -14,11 +14,16 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
 { 
     updateSonarConfig();
+
     std::cout << _sensor.initialize()<< std::endl;
+
     _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_images", _queue_size);
     _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360scan", _queue_size);
     _data_publisher = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("/ping360_data", _queue_size);
+
     timer_ = this->create_wall_timer(10ms, std::bind(&Ping360Sonar::timerCallback, this));
+
+    _cv_bridge.image = cv::Mat(_img_size, _img_size, CV_8UC1, cv::Scalar(0));
 }
 
 void Ping360Sonar::getSonarData()
@@ -93,8 +98,6 @@ void Ping360Sonar::dataSelection()
 sensor_msgs::msg::Image Ping360Sonar::generateImageMsg()
 {
     sensor_msgs::msg::Image msg;
-
-    cv::Mat image(_img_size, _img_size, CV_8UC1, cv::Scalar(0));
     float linear_factor = float(_data.size()) / float(_center.x);
     cv::Point point;
 
@@ -109,7 +112,7 @@ sensor_msgs::msg::Image Ping360Sonar::generateImageMsg()
                 auto theta = 2* M_PI * (_angle + k) / 400;
                 point.x = float(i) * cos(theta);
                 point.y = float(i) * sin(theta);
-                image.at<uint8_t>(point) = pointColor;
+                _cv_bridge.image.at<uint8_t>(point) = pointColor;
             }
         }
     }
@@ -118,13 +121,12 @@ sensor_msgs::msg::Image Ping360Sonar::generateImageMsg()
        RCLCPP_WARN(get_logger(), "an error occured, skipping image");
     }
 
+    _cv_bridge.toImageMsg(msg);
     msg.header.set__stamp(now());
     msg.header.set__frame_id(_frame_id);
+    msg.set__encoding(sensor_msgs::image_encodings::TYPE_8UC1);
     msg.set__width(_img_size);
     msg.set__height(_img_size);
-    msg.set__encoding(sensor_msgs::image_encodings::TYPE_8UC1);
-    msg.data; //TODO
-
 
     return (msg);
 };

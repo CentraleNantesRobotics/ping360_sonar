@@ -115,6 +115,7 @@ private:
   std::vector<float> _intensities;
 
   cv::Point _center = cv::Point(float(_img_size/2), float(_img_size/2));
+  cv_bridge::CvImage _cv_bridge;
 
   // sonar i/o
   SerialLink _link = SerialLink(_device, _baudrate);
