@@ -54,23 +54,21 @@ private:
 
   void updateAngle();
 
-  void transmitAngle(int);
+  ping_message* transmitAngle(int);
 
-  void set_mode(int);
+  ping_message* set_mode(int);
 
-  void set_angle(int);
+  ping_message* set_angle(int);
 
-  void set_gain_setting(int);
+  ping_message* set_gain_setting(int);
 
-  void set_transmit_duration(int);
+  ping_message* set_transmit_duration(int);
 
-  void set_transmit_frequency(int);
+  ping_message* set_transmit_frequency(int);
 
-  void set_sample_period(int);
+  ping_message* set_sample_period(int);
 
-  void set_number_of_samples(int);
-
-  void updateData();
+  ping_message* set_number_of_samples(int);
 
   void timerCallback();
 
@@ -99,7 +97,7 @@ private:
   std::string _frame_id = declare_parameter<std::string>("frameID", "sonar_frame");
 
   //get booleens
-  bool _debug = declare_parameter<bool>("debug", true);
+  bool _debug = declare_parameter<bool>("debug", false);
   bool _enable_image_topic = declare_parameter<int>("enableImageTopic", true);
   bool _enable_scan_topic = declare_parameter<bool>("enableScanTopic", true);
   bool _enable_data_topic = declare_parameter<bool>("enableDataTopic", true);
@@ -114,21 +112,17 @@ private:
 
   std::vector<int> _data;
   std::vector<uint8_t> _raw_data;
-  std::vector<float> _ranges{0};
-  std::vector<float> _intensities{0};
+  std::vector<float> _ranges;
+  std::vector<float> _intensities;
 
   cv::Point _center = cv::Point(float(_img_size/2), float(_img_size/2));
   cv_bridge::CvImage _cv_bridge;
 
   // sonar i/o
-  SerialLink _link = SerialLink(_device, _baudrate);
-  Ping360 _sensor = Ping360(_link);
-
-  //std::shared_ptr<PingPort> m_link = AbstractLink::openUrl("serial:/dev/ttyUSB0:115200");
+  //SerialLink _link = SerialLink(_device, _baudrate);
   //Ping360 _sensor = Ping360(*m_link);
-
-  //std::shared_ptr<AbstractLink> port = AbstractLink::openUrl("serial:/dev/ttyUSB0:115200");
-  //Ping360 _sensor = Ping360(*port.get());
+  std::shared_ptr<AbstractLink> port = AbstractLink::openUrl("serial:/dev/ttyUSB0:115200");
+  Ping360 _sensor = Ping360(*port.get());
 
   // ROS i/o
   rclcpp::TimerBase::SharedPtr timer_;

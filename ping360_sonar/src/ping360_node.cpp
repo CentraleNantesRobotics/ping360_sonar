@@ -7,16 +7,17 @@
 using namespace std::chrono_literals;
 using namespace ping360_sonar;
 
-/* the sensor data cannot be used as if apparently, need to find a fix for accessing them as as is the seem to always be 0 */
-/* is the node actually using the overwritten function _handlemessage? */
 
 Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
-{ 
-    updateSonarConfig();
+{
+    RCLCPP_INFO(get_logger(),"configuring");
+
     if(_sensor.initialize())
     {
+
         RCLCPP_INFO(get_logger(),"connected");
+        updateSonarConfig();
 
         _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_images", _queue_size);
         _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360_scan", _queue_size);
@@ -35,6 +36,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
 void Ping360Sonar::getSonarData()
 {
     transmitAngle(_angle);
+    std::cout<< _sensor.device_data_data.data<<std::endl;
     _data.resize(_sensor.device_data_data.data_length);
     _raw_data.resize(_sensor.device_data_data.data_length);
     for (int i = 0; i < _sensor.device_data_data.data_length; i++) {
@@ -72,6 +74,7 @@ int Ping360Sonar::getSamplePeriod(float _samplePeriodTickDuration)
 
 void Ping360Sonar::updateSonarConfig()
 {
+    set_mode(1);
     set_gain_setting(_gain);
     set_transmit_frequency(_transmit_frequency);
     set_transmit_duration(_transmit_duration);
@@ -87,6 +90,7 @@ void Ping360Sonar::dataSelection()
         if ( _data[index] >= _threshold)
         {
             int distance = calculateRange(index+1);
+            std::cout << distance <<std::endl;
             if(0.75 <= distance || distance <= _sonar_range)
             {
                 _ranges[0] = distance;
@@ -118,7 +122,7 @@ sensor_msgs::msg::Image Ping360Sonar::generateImageMsg()
                 auto theta = 2* M_PI * (_angle + k) / 400;
                 point.x = float(i) * cos(theta);
                 point.y = float(i) * sin(theta);
-                _cv_bridge.image.at<uint8_t>(point) = pointColor;
+                _cv_bridge.image.at<uint8_t>(point + _center) = pointColor;
             }
         }
     }
@@ -189,10 +193,10 @@ void Ping360Sonar::updateAngle()
     }
 }
 
-ping_message* Ping360Sonar::transmitAngle(int angle)
+void Ping360Sonar::transmitAngle(int angle)
 {
     _sensor.set_transducer(
-                0,
+                1,
                 _sensor.device_data_data.gain_setting,
                 angle,
                 _sensor.device_data_data.transmit_duration,
@@ -201,11 +205,11 @@ ping_message* Ping360Sonar::transmitAngle(int angle)
                 _sensor.device_data_data.number_of_samples,
                 1,
                 0);
+    updateData();
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
 }
 
-ping_message* Ping360Sonar::set_mode(int mode)
+void Ping360Sonar::set_mode(int mode)
 {
     _sensor.set_transducer(
                 mode,
@@ -217,11 +221,11 @@ ping_message* Ping360Sonar::set_mode(int mode)
                 _sensor.device_data_data.number_of_samples,
                 0,
                 0);
+    updateData();
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
 }
 
-ping_message* Ping360Sonar::set_angle(int angle)
+void Ping360Sonar::set_angle(int angle)
 {
     _sensor.set_transducer(
                 _sensor.device_data_data.mode,
@@ -233,11 +237,11 @@ ping_message* Ping360Sonar::set_angle(int angle)
                 _sensor.device_data_data.number_of_samples,
                 0,
                 0);
+    updateData();
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
 }
 
-ping_message* Ping360Sonar::set_gain_setting(int gain_setting)
+void Ping360Sonar::set_gain_setting(int gain_setting)
 {
     _sensor.set_transducer(
                 _sensor.device_data_data.mode,
@@ -249,11 +253,10 @@ ping_message* Ping360Sonar::set_gain_setting(int gain_setting)
                 _sensor.device_data_data.number_of_samples,
                 0,
                 0);
-
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
+    updateData();
 }
 
-ping_message* Ping360Sonar::set_transmit_duration(int transmit_duration)
+void Ping360Sonar::set_transmit_duration(int transmit_duration)
 {
     _sensor.set_transducer(
                 _sensor.device_data_data.mode,
@@ -265,11 +268,11 @@ ping_message* Ping360Sonar::set_transmit_duration(int transmit_duration)
                 _sensor.device_data_data.number_of_samples,
                 0,
                 0);
+    updateData();
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
 }
 
-ping_message* Ping360Sonar::set_transmit_frequency(int transmit_frequency)
+void Ping360Sonar::set_transmit_frequency(int transmit_frequency)
 {
     _sensor.set_transducer(
                 _sensor.device_data_data.mode,
@@ -281,11 +284,11 @@ ping_message* Ping360Sonar::set_transmit_frequency(int transmit_frequency)
                 _sensor.device_data_data.number_of_samples,
                 0,
                 0);
+    updateData();
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
 }
 
-ping_message* Ping360Sonar::set_sample_period(int sample_period)
+void Ping360Sonar::set_sample_period(int sample_period)
 {
     _sensor.set_transducer(
                 _sensor.device_data_data.mode,
@@ -297,11 +300,11 @@ ping_message* Ping360Sonar::set_sample_period(int sample_period)
                 _sensor.device_data_data.number_of_samples,
                 0,
                 0);
+    updateData();
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
 }
 
-ping_message* Ping360Sonar::set_number_of_samples(int number_of_samples)
+void Ping360Sonar::set_number_of_samples(int number_of_samples)
 {
     _sensor.set_transducer(
                 _sensor.device_data_data.mode,
@@ -313,8 +316,21 @@ ping_message* Ping360Sonar::set_number_of_samples(int number_of_samples)
                 number_of_samples,
                 0,
                 0);
+    updateData();
+}
 
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
+void Ping360Sonar::updateData()
+{
+    auto device_data_data = static_cast<const ping360_device_data*>(_sensor.waitMessage(Ping360Id::DEVICE_DATA, 8000));
+    _sensor.device_data_data.mode = device_data_data->mode();
+    _sensor.device_data_data.angle = device_data_data->angle();
+    _sensor.device_data_data.data_length = device_data_data->data_length();
+    _sensor.device_data_data.data = device_data_data->data();
+    _sensor.device_data_data.gain_setting = device_data_data->gain_setting();
+    _sensor.device_data_data.sample_period = device_data_data->sample_period();
+    _sensor.device_data_data.number_of_samples = device_data_data->number_of_samples();
+    _sensor.device_data_data.transmit_duration = device_data_data->transmit_duration();
+    _sensor.device_data_data.transmit_frequency = device_data_data->transmit_frequency();
 }
 
 void Ping360Sonar::timerCallback()
@@ -338,6 +354,7 @@ void Ping360Sonar::timerCallback()
 
     if(_enable_scan_topic)
     {
+        dataSelection();
         _scan_publisher->publish(generateScanMsg());
     }
 
