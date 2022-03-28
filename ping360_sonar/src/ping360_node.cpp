@@ -321,16 +321,38 @@ void Ping360Sonar::set_number_of_samples(int number_of_samples)
 
 void Ping360Sonar::updateData()
 {
-    auto device_data_data = static_cast<const ping360_device_data*>(_sensor.waitMessage(Ping360Id::DEVICE_DATA, 8000));
-    _sensor.device_data_data.mode = device_data_data->mode();
-    _sensor.device_data_data.angle = device_data_data->angle();
-    _sensor.device_data_data.data_length = device_data_data->data_length();
-    _sensor.device_data_data.data = device_data_data->data();
-    _sensor.device_data_data.gain_setting = device_data_data->gain_setting();
-    _sensor.device_data_data.sample_period = device_data_data->sample_period();
-    _sensor.device_data_data.number_of_samples = device_data_data->number_of_samples();
-    _sensor.device_data_data.transmit_duration = device_data_data->transmit_duration();
-    _sensor.device_data_data.transmit_frequency = device_data_data->transmit_frequency();
+    auto message = static_cast<const ping360_device_data*>(_sensor.waitMessage(Ping360Id::DEVICE_DATA, 8000));
+    if(message == nullptr)
+    {
+        RCLCPP_WARN(get_logger(),"timed out");
+    }
+    else
+    {
+
+        if(message->message_id()==Ping360Id::DEVICE_DATA)
+        {
+            _sensor.device_data_data.mode = message->mode();
+            _sensor.device_data_data.gain_setting = message->gain_setting();
+            _sensor.device_data_data.angle = message->angle();
+           _sensor. device_data_data.transmit_duration = message->transmit_duration();
+            _sensor.device_data_data.sample_period = message->sample_period();
+            _sensor.device_data_data.transmit_frequency = message->transmit_frequency();
+            _sensor.device_data_data.number_of_samples = message->number_of_samples();
+            if (message->data_length() > _sensor.device_data_data.data_length) {
+                if (_sensor.device_data_data.data) {
+                    delete[] _sensor.device_data_data.data;
+                }
+                _sensor.device_data_data.data = new uint8_t[message->data_length()];
+            }
+
+            _sensor.device_data_data.data_length = message->data_length();
+            memcpy(_sensor.device_data_data.data, message->data(), message->data_length());
+        }
+        else
+        {
+            RCLCPP_WARN(get_logger(), "NACK");
+        }
+    }
 }
 
 void Ping360Sonar::timerCallback()
