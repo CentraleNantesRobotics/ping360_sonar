@@ -25,6 +25,7 @@ class Ping360_node(Node):
         # declare parameters
 
         self.create_timer(0.01, self.timer_callback)  # 100Hz
+        # declaring parameters for ROS in a dictionary to actually declare them in a loop
         self.ParametersInteger = {
             'baudrate': 115200,
             'gain': 0,
@@ -52,7 +53,7 @@ class Ping360_node(Node):
             'enableDataTopic': True,
             'oscillate': True,
         }
-
+        # declaration loops
         for param in self.ParametersInteger.keys():
             exec(
                 f'self._{param} = self.declare_parameter(\"{param}\", {self.ParametersInteger[param]}).get_parameter_value().integer_value')
@@ -69,12 +70,17 @@ class Ping360_node(Node):
             exec(
                 f'self._{param} = self.declare_parameter(\"{param}\", {self.ParametersBool[param]}).get_parameter_value().bool_value')
 
-        # get parameters
+        # computing and initializing other parameters
         self._samplePeriod = self.calculateSamplePeriod()
         self._transmitDuration = self.adjustTransmitDuration()
         self._FOV = self._maxAngle - self._minAngle
         self._sign = 1
         self._angle = self._minAngle
+        self._updated = True
+        self._ranges = [0]
+        self._intensities = [0]
+        self._bridge = CvBridge()
+        self._center = (float(self._imgSize / 2), float(self._imgSize / 2))
 
         if self._FOV <= 0:
             self.get_logger().info(
@@ -88,14 +94,6 @@ class Ping360_node(Node):
 
         self._sensor = Ping360(self._device, self._baudrate)
         self.get_logger().info(f'Initialized Sensor: {self._sensor.initialize()}')
-        self._updated = True
-        self._ranges = [0]
-        self._intensities = [0]
-
-        # self.srv = Server(sonarConfig, callback) // never used in the original python file
-
-        self._bridge = CvBridge()
-        self._center = (float(self._imgSize / 2), float(self._imgSize / 2))
 
         self._imagePub = self.create_publisher(Image, "/ping360_images", self._queue_size)
         self._rawPub = self.create_publisher(SonarEcho, "/ping360_data", self._queue_size)
@@ -104,6 +102,11 @@ class Ping360_node(Node):
         self.add_on_set_parameters_callback(self.cb_params)
 
     def cb_params(self, params):
+        """
+        tries to apply new parameters
+        :arg
+            params: list
+        """
 
         result = True
         reason = ""
@@ -146,9 +149,7 @@ class Ping360_node(Node):
     def getSonarData(self):
         """
         Transmits the sonar angle and returns the sonar intensities
-        Args:
-            self: Ping360_node class
-        Returns:
+        :returns
             list: Intensities from 0 to 255
         """
         self._sensor.transmitAngle(self._angle)
@@ -156,13 +157,13 @@ class Ping360_node(Node):
         return [k for k in data]
 
     def generateRawMsg(self, data):
+        # type: (Ping360_node, list) -> SonarEcho
         """
         Generates the raw message for the data topic
-        Args:
-            self: Ping360_node class
-            data (list): List of intensities
-        Returns:
-            SonarEcho: message
+        :arg
+            data: List of intensities
+        :returns
+            SonarEcho: message ready to be published
         """
         msg = SonarEcho()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -179,10 +180,8 @@ class Ping360_node(Node):
     def generateScanMsg(self):
         """
         Generates the laserScan message for the scan topic
-        Args:
-            self: Ping360_node class
-        Returns:
-            LaserScan: message
+        :returns
+            LaserScan: message ready to be published
         """
         msg = LaserScan()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -199,6 +198,8 @@ class Ping360_node(Node):
         return msg
 
     def publishImage(self, image):
+        """
+        """
         try:
             self._imagePub.publish(self._bridge.cv2_to_imgmsg(image, "mono8"))
         except CvBridgeError as e:
@@ -208,17 +209,23 @@ class Ping360_node(Node):
     def calculateRange(self, index, _samplePeriodTickDuration=25e-9):
         """
         Calculate the range based in the duration
+        :arg
+            index: integer, position of a given intensity
+        :returns
+            float: range the index refers to
         """
         return index * self._speedOfSound * _samplePeriodTickDuration * self._samplePeriod / 2
 
     def calculateSamplePeriod(self, _samplePeriodTickDuration=25e-9):
         """
         Calculate the sample period based in the new range
+        :returns
+            int: sample rate value
         """
         return int(2 * self._sonarRange / (self._numberOfSamples * self._speedOfSound * _samplePeriodTickDuration))
 
     def adjustTransmitDuration(self, _firmwareMinTransmitDuration=5):
-        # type: (Ping360_node, float) -> float
+        # type: (Ping360_node, float) -> int
         """
         @brief Adjust the transmit duration for a specific range
         Per firmware engineer:
@@ -228,7 +235,7 @@ class Ping360_node(Node):
             if TxPulse < (2.5 * sample interval) then TxPulse = (2.5 * sample interval)
             (transmit duration is microseconds, samplePeriod() is nanoseconds)
         3. Perform limit checking
-        Returns:
+        :returns
             float: Transmit duration
         """
         duration = 8000 * self._sonarRange / self._speedOfSound
@@ -243,7 +250,7 @@ class Ping360_node(Node):
         firmware to prevent damage to the hardware
         The maximum transmit duration is equal to 64 * the sample period in microseconds
 
-        Returns:
+        :returns
             float: The maximum transmit duration possible
         """
         return min(_firmwareMaxTransmitDuration, self.getSamplePeriod() * 64e6)
@@ -254,6 +261,7 @@ class Ping360_node(Node):
         return int(self._samplePeriod * _samplePeriodTickDuration)
 
     def updateSonarConfig(self):
+        """  Sending input parameters to the sonar  """
         self._sensor.set_gain_setting(self._gain)
         self._sensor.set_transmit_frequency(self._transmitFrequency)
         self._sensor.set_transmit_duration(self._transmitDuration)
@@ -262,6 +270,7 @@ class Ping360_node(Node):
         self._updated = False
 
     def dataSelection(self, data):
+        """  Selects the closest object according to the threshold  """
         for detectedIntensity in data:
             if detectedIntensity >= self._threshold:
                 detectedIndex = data.index(detectedIntensity)
@@ -275,6 +284,7 @@ class Ping360_node(Node):
                     break
 
     def buildImage(self, data):
+        """  Creates the image from the data received from the sonar  """
         image = np.zeros((self._imgSize, self._imgSize, 1), np.uint8)
         linear_factor = float(len(data)) / float(self._center[0])
         try:
@@ -295,6 +305,7 @@ class Ping360_node(Node):
         return image
 
     def updateAngle(self):
+        """  Update the member value for the angle to request according to minAngle, maxAngle and oscillate  """
         self._angle += self._sign * self._step
         if self._angle >= self._maxAngle:
             if not self._oscillate:
@@ -308,6 +319,7 @@ class Ping360_node(Node):
             self._angle = self._minAngle
 
     def timer_callback(self):
+        """  main function to execute on the timer callback  """
 
         if self._debug:
             self.get_logger().info('running')
