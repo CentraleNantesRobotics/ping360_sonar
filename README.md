@@ -27,7 +27,7 @@ Get the latest stable release [here](https://github.com/CentraleNantesRobotics/p
 
 #### Dependencies
 
-- [Robot Operating System (ROS)](http://wiki.ros.org) (middleware for robotics),
+- [Robot Operating System (ROS)](https://docs.ros.org/en/foxy/) (middleware for robotics),
 - [cv_bridge]
 
 #### Building
