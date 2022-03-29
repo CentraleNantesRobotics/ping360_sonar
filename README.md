@@ -11,7 +11,7 @@
 
 A ROS 2 package for the [BlueRobotics] [Ping360] Sonar. This code is being developped for Foxy.
 
-**Keywords:** ROS 2, package, ping360, ping360 emulator
+**Keywords:** ROS 2, package, ping360
 
 ### License
 
