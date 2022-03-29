@@ -144,6 +144,9 @@ class Ping360_node(Node):
         if result:
             for param in params:
                 exec(f'self._{param.name} = param.value')
+            self._samplePeriod = self.calculateSamplePeriod()
+            self._transmitDuration = self.adjustTransmitDuration()
+            self.updateSonarConfig()
 
         return SetParametersResult(successful=result, reason=reason)
 
