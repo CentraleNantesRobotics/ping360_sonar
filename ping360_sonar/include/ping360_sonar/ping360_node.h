@@ -56,22 +56,6 @@ private:
 
   void transmitAngle(int);
 
-  void set_mode(int);
-
-  void set_angle(int);
-
-  void set_gain_setting(int);
-
-  void set_transmit_duration(int);
-
-  void set_transmit_frequency(int);
-
-  void set_sample_period(int);
-
-  void set_number_of_samples(int);
-
-  void updateData();
-
   void timerCallback();
 
 
@@ -110,7 +94,7 @@ private:
   int _angle = _min_angle;
   int _sign = 1;
   int _transmit_duration = adjustTransmitDuration();
-  int _sample_period = getSamplePeriod();
+  int _sample_period = calculateSamplePeriod();
 
   std::vector<int> _data;
   std::vector<uint8_t> _raw_data;

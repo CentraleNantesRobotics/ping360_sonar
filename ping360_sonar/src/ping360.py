@@ -81,6 +81,7 @@ class Ping360_node(Node):
         self._intensities = [0]
         self._bridge = CvBridge()
         self._center = (float(self._imgSize / 2), float(self._imgSize / 2))
+        self._image = np.zeros((self._imgSize, self._imgSize, 1), np.uint8)
 
         if self._FOV <= 0:
             self.get_logger().info(
@@ -285,7 +286,6 @@ class Ping360_node(Node):
 
     def buildImage(self, data):
         """  Creates the image from the data received from the sonar  """
-        image = np.zeros((self._imgSize, self._imgSize, 1), np.uint8)
         linear_factor = float(len(data)) / float(self._center[0])
         try:
             for i in range(int(self._center[0])):
@@ -297,12 +297,11 @@ class Ping360_node(Node):
                     theta = 2 * pi * (self._angle + k) / 400.0
                     x = float(i) * cos(theta)
                     y = float(i) * sin(theta)
-                    image[int(self._center[0] + x)][int(self._center[1] + y)][0] = pointColor
+                    self._image[int(self._center[0] + x)][int(self._center[1] + y)][0] = pointColor
         except IndexError:
             self.get_logger().info(
                 "IndexError: data response was empty, skipping this iteration..")
             pass
-        return image
 
     def updateAngle(self):
         """  Update the member value for the angle to request according to minAngle, maxAngle and oscillate  """
@@ -342,8 +341,8 @@ class Ping360_node(Node):
             self._laserPub.publish(scanDataMsg)
 
         if self._enableImageTopic:
-            image = self.buildImage(data)
-            self.publishImage(image)
+            self.buildImage(data)
+            self.publishImage(self._image)
 
         self.updateAngle()
 
