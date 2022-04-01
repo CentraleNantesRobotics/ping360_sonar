@@ -1,11 +1,30 @@
-// basic node to begin the project
 
 #include <ping360_sonar/ping360_node.h>
+#include <ping360_sonar/sector.h>
 #include <ping-message-common.h>
-#include "ping-message-ping360.h"
+#include <ping-message-ping360.h>
 
+using namespace rcl_interfaces::msg;
 using namespace std::chrono_literals;
 using namespace ping360_sonar;
+using std::string;
+using std::vector;
+
+// helper class to declare bounded parameters
+struct BoundedParam
+{
+  ParameterDescriptor descriptor;
+  int default_value;
+  BoundedParam(string name, int default_value, int lower, int upper, string description = "", int step = 1)
+    : default_value{default_value}
+  {
+    descriptor.set__name(name).set__description(description);
+    descriptor.integer_range = {IntegerRange()
+                                .set__from_value(lower)
+                                .set__to_value(upper)
+                                .set__step(step)};
+  }
+};
 
 /* the sensor data cannot be used as if apparently, need to find a fix for accessing them as as is the seem to always be 0 */
 /* is the node actually using the overwritten function _handlemessage? */
@@ -13,339 +32,260 @@ using namespace ping360_sonar;
 Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
 { 
-    std::cout << _sensor.initialize()<< std::endl;
-    _image_publisher = create_publisher<sensor_msgs::msg::Image>("/ping360_node/sonar/images", _queue_size);
-    _scan_publisher = create_publisher<sensor_msgs::msg::LaserScan>("/ping360_node/sonar/scan", _queue_size);
-    _data_publisher = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("/ping360_node/sonar/data", _queue_size);
-    timer_ = this->create_wall_timer(10ms, std::bind(&Ping360Sonar::timerCallback, this));
+
+  sonar.initialize();
+
+  // bounded parameters
+  const vector<BoundedParam> params{
+    {"gain", 0, 0, 2},
+    {"frequency", 740, 650,850},
+    {"range", 2, 1,50},
+    {"duration",1,1,1000},
+    {"samples",200,100,1000},
+    {"min_angle", 0, 0, 200, "min scanning angle in gradians"},
+    {"max_angle", 400, 200, 400, "max scanning angle in gradians"},
+    {"angle_step", 1, 1, 15, "angular step in gradians"},
+    {"image_size", 300, 100, 1000, "Size of the published image", 2},
+    {"scan_threshold", 200, 1, 255, "Intensity threshold for LaserScan message"},  // uchar
+    {"speed_of_sound", 1500, 1000, 2000, "Speed of sound [m/s]"},
+    {"image_rate", 100, 50, 2000, "Image publishing rate [ms]"}
+  };
+
+  for(auto &param: params)
+    declare_parameter<int>(param.descriptor.name, param.default_value, param.descriptor);
+
+  // other, unbounded params
+  publish_image = declare_parameter<bool>("publish_image", true);
+  publish_scan = declare_parameter<bool>("publish_scan", true);
+  publish_echo = declare_parameter<bool>("publish_echo", false);
+
+  // constant initialization
+  const auto frame{declare_parameter<string>("frame", "sonar")};
+  image.header.set__frame_id(frame);
+  image.set__encoding("mono8");
+  image.set__is_bigendian(0);
+  scan.header.set__frame_id(frame);
+  scan.set__range_min(0.75);
+  echo.header.set__frame_id(frame);
+
+  // ROS interface
+  const auto reason{configureFromParams()};
+  if(!reason.empty())
+    throw std::runtime_error(reason);
+
+  const auto image_rate_ms{get_parameter("image_rate").as_int()};
+  image_timer = this->create_wall_timer(std::chrono::milliseconds(image_rate_ms),
+                                        [this](){publishImage();});
+
+  param_change = add_on_set_parameters_callback(
+                   std::bind(&Ping360Sonar::parametersCallback, this, std::placeholders::_1));
 }
 
-void Ping360Sonar::getSonarData()
+Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Parameter> &new_params) const
 {
-    transmitAngle(_angle);
-    _data.resize(_sensor.device_data_data.data_length);
-    for (int i = 0; i < _sensor.device_data_data.data_length; i++) {
-        _data[i] = _sensor.device_data_data.data[i] / 255.0;
-    }
-    _raw_data.resize(_sensor.device_data_data.data_length);
-    for (int i = 0; i < _sensor.device_data_data.data_length; i++) {
-        _raw_data[i] = _sensor.device_data_data.data[i];
-    }
-}
+  // "only" parameters to be monitored for change
+  using ParamType = rclcpp::ParameterType;
+  const std::map<ParamType,vector<string>> mutable_params{
+    {ParamType::PARAMETER_INTEGER,{"gain","frequency","range",
+                                   "min_angle","max_angle","angle_step",
+                                   "speed_of_sound","samples","image_size", "scan_threshold"}},
+    {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
 
-float Ping360Sonar::calculateRange(int index, float _samplePeriodTickDuration)
-{
-    return index*_speed_of_sound*_samplePeriodTickDuration*_sample_period/2;
-}
-
-int Ping360Sonar::calculateSamplePeriod(float _samplePeriodTickDuration)
-{
-    return int(2*_sonar_range/(_number_of_samples*_speed_of_sound*_samplePeriodTickDuration));
-}
-
-int Ping360Sonar::adjustTransmitDuration(int _firmwareMinTransmitDuration)
-{
-   auto duration = 8000*_sonar_range/_speed_of_sound;
-   auto transmitDurationMax = std::max(int(2.5*Ping360Sonar::getSamplePeriod()/1000), int(duration));
-   return std::max(_firmwareMinTransmitDuration, std::min(Ping360Sonar::getSamplePeriod(),transmitDurationMax));
-}
-
-int Ping360Sonar::transmitDurationMax(int _firmwareMaxTransmitDuration)
-{
-    return std::min(_firmwareMaxTransmitDuration, int(Ping360Sonar::getSamplePeriod()*64e6));
-}
-
-int Ping360Sonar::getSamplePeriod(float _samplePeriodTickDuration)
-{
-    return(_sample_period*_samplePeriodTickDuration);
-}
-
-void Ping360Sonar::updateSonarConfig()
-{
-    set_gain_setting(_gain);
-    set_transmit_frequency(_transmit_frequency);
-    set_transmit_duration(_transmit_duration);
-    set_number_of_samples(_number_of_samples);
-    set_sample_period(_sample_period);
-    _updated = false;
-}
-
-void Ping360Sonar::dataSelection()
-{
-    for (int index =0; index<_data.size(); index++)
+  IntParams mapping;
+  for(const auto &[type,names]: mutable_params)
+  {
+    const auto params{get_parameters(names)};
+    if(type == ParamType::PARAMETER_INTEGER)
     {
-        if ( _data[index] >= _threshold)
-        {
-            int distance = calculateRange(index+1);
-            if(0.75 <= distance || distance <= _sonar_range)
-            {
-                _ranges[0] = distance;
-                _intensities[0] = _data[index];
-                if(_debug)
-                {
-                    std::cout<<"Object at "<< _angle <<" grad :" << distance << "m - " << _intensities[0]*100/255 <<"%" <<std::endl;
-                }
-                break;
-            }
-        }
-    }
-}
-
-sensor_msgs::msg::Image Ping360Sonar::generateImageMsg()
-{
-    sensor_msgs::msg::Image msg;
-    builtin_interfaces::msg::Time allocator;
-
-    cv::Mat image(_img_size, _img_size, CV_8UC1, cv::Scalar(0));
-    float linear_factor = float(_data.size()) / float(_center.x);
-    cv::Point point;
-
-    if(_data.size() != 0)
-    {
-        for(int i = 0; i < int(_center.x); i ++)
-        {
-            auto pointColor = _data[int(i*linear_factor)];
-
-            for(int k = 0; k<= 8 * _step; k+=_step)
-            {
-                auto theta = 2* M_PI * (_angle + k) / 400;
-                point.x = float(i) * cos(theta);
-                point.y = float(i) * sin(theta);
-                image.at<uint8_t>(point) = pointColor;
-            }
-        }
+      for(auto &param: params)
+        mapping[param.get_name()] = param.as_int();
     }
     else
     {
-       RCLCPP_WARN(get_logger(), "an error occured, skipping image");
+      for(auto &param: params)
+        mapping[param.get_name()] = param.as_bool();
     }
 
-    msg.header.set__stamp(allocator);
-    msg.header.set__frame_id("sonar_frame");
-    msg.set__width(_img_size);
-    msg.set__height(_img_size);
-    msg.set__encoding(sensor_msgs::image_encodings::TYPE_8UC1);
-    msg.data; //TODO
+  }
+  // override with new ones
+  for(auto &param: new_params)
+  {
+    if(param.get_type() == ParamType::PARAMETER_BOOL)
+      mapping[param.get_name()] = param.as_bool();
+    else if(param.get_type() == ParamType::PARAMETER_INTEGER)
+      mapping[param.get_name()] = param.as_int();
+  }
 
-
-    return (msg);
-};
-
-sensor_msgs::msg::LaserScan Ping360Sonar::generateScanMsg()
-{
-    sensor_msgs::msg::LaserScan msg;
-    builtin_interfaces::msg::Time allocator;
-
-    msg.header.set__stamp(allocator);
-    msg.header.set__frame_id("sonar_frame");
-    msg.set__angle_min(2*M_PI*_min_angle/400);
-    msg.set__angle_max(2*M_PI*_max_angle/400);
-    msg.set__angle_increment(2*M_PI*_step/400);
-    msg.set__time_increment(0);
-    msg.set__range_min(.75);
-    msg.set__range_max(_sonar_range);
-    msg.set__ranges(_ranges);
-    msg.set__intensities(_intensities);
-
-    return(msg);
+  return mapping;
 }
 
-ping360_sonar_msgs::msg::SonarEcho Ping360Sonar::generateRawMsg()
+SetParametersResult Ping360Sonar::parametersCallback(const vector<rclcpp::Parameter> &parameters)
 {
-    ping360_sonar_msgs::msg::SonarEcho msg;
-    builtin_interfaces::msg::Time allocator;
-
-    msg.header.set__stamp(allocator);
-    msg.header.set__frame_id("sonar_frame");
-    msg.set__angle(_angle);
-    msg.set__gain(_gain);
-    msg.set__range(_sonar_range);
-    msg.set__speed_of_sound(_speed_of_sound);
-    msg.set__number_of_samples(_number_of_samples);
-    msg.set__transmit_frequency(_transmit_frequency);
-    msg.set__intensities(_raw_data);
-
-    return(msg);
+  SetParametersResult result;
+  result.reason = configureFromParams(parameters);
+  result.successful = result.reason.empty();
+  return result;
 }
 
-void Ping360Sonar::updateAngle()
+void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
 {
-    _angle +=_step * _sign;
-    if (_angle >= _max_angle)
+#ifdef PING360_DEBUG_PUBLISHERS
+  const auto qos{rclcpp::QoS(5)};
+#else
+  const auto qos{rclcpp::SensorDataQoS()};
+#endif
+
+  publish_echo = echo;
+  publish_image = image;
+  publish_scan = scan;
+
+  if(publish_image && image_pub == nullptr)
+    image_pub = create_publisher<sensor_msgs::msg::Image>("scan_image", qos);
+
+  if(publish_echo && echo_pub == nullptr)
+    echo_pub = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("scan_echo", qos);
+
+  if(publish_scan && scan_pub == nullptr)
+    scan_pub = create_publisher<sensor_msgs::msg::LaserScan>("scan", qos);
+}
+
+std::string Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_params)
+{
+  // get current params updated with new ones, if any
+  const auto params{updatedParams(new_params)};
+
+  // ensure parameters are valid before configuring
+  const auto msg{sonar.configureAngles(params.at("min_angle"),
+                                       params.at("max_angle"),
+                                       params.at("angle_step"))};
+  if(!msg.empty())
+    return msg;
+
+  initPublishers(params.at("publish_image"),
+                 params.at("publish_scan"),
+                 params.at("publish_echo"));
+
+  sonar.configureTransducer(params.at("gain"),
+                            params.at("samples"),
+                            params.at("frequency"),
+                            params.at("speed_of_sound"),
+                            params.at("range"));
+
+  // forward to message meta-data
+  echo.set__gain(params.at("gain"));
+  echo.set__range(params.at("range"));
+  echo.set__speed_of_sound(params.at("speed_of_sound"));
+  echo.set__number_of_samples(params.at("samples"));
+  echo.set__transmit_frequency(params.at("frequency"));
+
+  scan.set__angle_min(sonar.minAngle());
+  scan.set__angle_increment(sonar.angleStep());
+  scan.set__angle_max(sonar.maxAngle() - scan.angle_increment);
+  scan.set__range_max(params.at("range"));
+  scan.set__time_increment(sonar.transmitDuration());
+
+  const int size{params.at("image_size")};
+  if(size != static_cast<int>(image.step))
+  {
+    image.data.resize(size*size);
+    std::fill(image.data.begin(), image.data.end(), 0);
+    image.height = image.width = image.step = size;
+  }
+
+  sector.configure(params.at("samples"), size/2);
+  scan_threshold = params.at("scan_threshold");
+
+  return {};
+}
+
+
+void Ping360Sonar::publishEcho(const rclcpp::Time &now)
+{
+  const auto [data, length] = sonar.intensities(); {}
+  echo.angle = sonar.currentAngle();
+  echo.intensities.resize(length);
+  std::copy(data, data+length, echo.intensities.begin());
+  echo.header.set__stamp(now);
+  echo_pub->publish(echo);
+}
+
+void Ping360Sonar::publishScan(const rclcpp::Time &now, bool end_turn)
+{
+  // write latest reading
+  scan.ranges.resize(sonar.angleCount());
+  scan.intensities.resize(sonar.angleCount());
+
+  const auto angle{sonar.angleIndex()};
+  auto &this_range = scan.ranges[angle] = 0;
+  auto &this_intensity = scan.intensities[angle] = 0;
+
+  // find first (nearest) valid point in this direction
+  const auto [data, length] = sonar.intensities(); {}
+  for(int index=0; index<length; index++)
+  {
+    if(data[index] >= scan_threshold)
     {
-        if (not _oscillate)
-        {
-            _angle = _min_angle;
-        }
-        else
-        {
-            _angle = _max_angle;
-            _sign = -1;
-        }
+      if(const auto range{sonar.rangeFrom(index)};
+         range >= scan.range_min && range < scan.range_max)
+      {
+        this_range = range;
+        this_intensity = data[index]/255.f;
+        break;
+      }
     }
-    if (_angle <= _min_angle)
-    {
-        _angle = _min_angle;
-        _sign = 1;
-    }
+  }
+
+  if(end_turn)
+  {
+    scan.header.set__stamp(now);
+    scan_pub->publish(scan);
+  }
 }
 
-ping_message* Ping360Sonar::transmitAngle(int angle)
+void Ping360Sonar::refreshImage()
 {
-    _sensor.set_transducer(
-                0,
-                _sensor.device_data_data.gain_setting,
-                angle,
-                _sensor.device_data_data.transmit_duration,
-                _sensor.device_data_data.sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                1,
-                0);
+  const auto [data, length] = sonar.intensities(); {}
+  if(length == 0) return;
+  const auto half_size{image.step/2};
 
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
+  sector.init(sonar.currentAngle(), sonar.angleStep());
+  int x{}, y{}, index{};
+
+  while(sector.nextPoint(x, y, index))
+  {
+    if(index < length)
+      image.data[half_size-y + image.step*(half_size-x)] = data[index];
+  }
 }
 
-ping_message* Ping360Sonar::set_mode(int mode)
+void Ping360Sonar::refresh()
 {
-    _sensor.set_transducer(
-                mode,
-                _sensor.device_data_data.gain_setting,
-                _sensor.device_data_data.angle,
-                _sensor.device_data_data.transmit_duration,
-                _sensor.device_data_data.sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                0,
-                0);
+  const auto &[valid, end_turn] = sonar.read(); {}
+  if(end_turn)
+  std::cout << "end turn @ " << sonar.transmitDuration() << " s " <<std::endl;
 
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
+  if(!valid)
+  {
+    RCLCPP_WARN(get_logger(), "Cannot communicate with sonar");
+    return;
+  }
+
+  const auto now{this->now()};
+  if(publish_echo && echo_pub->get_subscription_count())
+    publishEcho(now);
+
+  if(publish_image && image_pub->get_subscription_count())
+    refreshImage();
+
+  if(publish_scan && scan_pub->get_subscription_count())
+    publishScan(now, end_turn);
 }
 
-ping_message* Ping360Sonar::set_angle(int angle)
+void Ping360Sonar::publishImage()
 {
-    _sensor.set_transducer(
-                _sensor.device_data_data.mode,
-                _sensor.device_data_data.gain_setting,
-                angle,
-                _sensor.device_data_data.transmit_duration,
-                _sensor.device_data_data.sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                0,
-                0);
-
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
-}
-
-ping_message* Ping360Sonar::set_gain_setting(int gain_setting)
-{
-    _sensor.set_transducer(
-                _sensor.device_data_data.mode,
-                gain_setting,
-                _sensor.device_data_data.angle,
-                _sensor.device_data_data.transmit_duration,
-                _sensor.device_data_data.sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                0,
-                0);
-
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
-}
-
-ping_message* Ping360Sonar::set_transmit_duration(int transmit_duration)
-{
-    _sensor.set_transducer(
-                _sensor.device_data_data.mode,
-                _sensor.device_data_data.gain_setting,
-                _sensor.device_data_data.angle,
-                transmit_duration,
-                _sensor.device_data_data.sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                0,
-                0);
-
-    return _sensor.waitMessage(Ping360Id::DEVICE_DATA, 4);
-}
-
-ping_message* Ping360Sonar::set_transmit_frequency(int transmit_frequency)
-{
-    _sensor.set_transducer(
-                _sensor.device_data_data.mode,
-                _sensor.device_data_data.gain_setting,
-                _sensor.device_data_data.angle,
-                _sensor.device_data_data.transmit_duration,
-                _sensor.device_data_data.sample_period,
-                transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                0,
-                0);
-
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
-}
-
-ping_message* Ping360Sonar::set_sample_period(int sample_period)
-{
-    _sensor.set_transducer(
-                _sensor.device_data_data.mode,
-                _sensor.device_data_data.gain_setting,
-                _sensor.device_data_data.angle,
-                _sensor.device_data_data.transmit_duration,
-                sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                _sensor.device_data_data.number_of_samples,
-                0,
-                0);
-
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
-}
-
-ping_message* Ping360Sonar::set_number_of_samples(int number_of_samples)
-{
-    _sensor.set_transducer(
-                _sensor.device_data_data.mode,
-                _sensor.device_data_data.gain_setting,
-                _sensor.device_data_data.angle,
-                _sensor.device_data_data.transmit_duration,
-                _sensor.device_data_data.sample_period,
-                _sensor.device_data_data.transmit_frequency,
-                number_of_samples,
-                0,
-                0);
-
-    return _sensor.Ping360::waitMessage(Ping360Id::DEVICE_DATA, 4);
-}
-
-void Ping360Sonar::timerCallback()
-{
-    if(_debug)
-    {
-        RCLCPP_INFO(get_logger(), "running");
-    }
-
-    if(_updated)
-    {
-        updateSonarConfig();
-    }
-
-    getSonarData();
-
-    if(_enable_data_topic)
-    {
-        _data_publisher->publish(generateRawMsg());
-    }
-
-    if(_enable_scan_topic)
-    {
-        _scan_publisher->publish(generateScanMsg());
-    }
-
-    if(_enable_image_topic)
-    {
-        _image_publisher->publish(generateImageMsg());
-    }
-
-    updateAngle();
+  if(publish_image && image_pub->get_subscription_count())
+  {
+    image.header.set__stamp(now());
+    image_pub->publish(image);
+  }
 }
