@@ -5,7 +5,9 @@ jobs:
     runs-on: ubuntu-20.04
     container: ros:foxy-ros-base
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
+        with: 
+          submodules: 'true'
       - name: Install package dependencies
         run: |
           cd / && ./ros_entrypoint.sh
