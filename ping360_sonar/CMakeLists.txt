@@ -15,7 +15,6 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(cv_bridge REQUIRED)
 find_package(ping360_sonar_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 
@@ -31,7 +30,7 @@ if(REAL_SONAR)
 endif()
 target_include_directories(ping360_node PRIVATE include src/ping-cpp/src)
 target_link_libraries(ping360_node ping-cpp)
-ament_target_dependencies(ping360_node rclcpp sensor_msgs cv_bridge ping360_sonar_msgs image_transport)
+ament_target_dependencies(ping360_node rclcpp sensor_msgs ping360_sonar_msgs image_transport)
   
 # Install
 ament_python_install_package(${PROJECT_NAME})

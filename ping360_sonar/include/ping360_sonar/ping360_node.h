@@ -8,7 +8,6 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <ping360_sonar_msgs/msg/sonar_echo.hpp>
-#include <opencv2/core/mat.hpp>
 #include <rcl_interfaces/msg/set_parameters_result.hpp>
 
 #include <ping360_sonar/sector.h>

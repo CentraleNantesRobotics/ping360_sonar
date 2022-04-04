@@ -1,8 +1,9 @@
 #ifndef PING360_SONAR_SECTOR
 #define PING360_SONAR_SECTOR
 
-#include <opencv2/imgproc.hpp>
 #include <map>
+#include <math.h>
+#include <vector>
 
 namespace ping360_sonar
 {
@@ -16,7 +17,7 @@ class Sector
     int x{}, low{}, up{};
     static inline int clamp(double value)
     {
-      return std::clamp<int>(std::round(value), -radius, radius);
+      return value < -radius ? -radius : value > radius ? radius : value;
     }
     explicit Bound(int x, double tan_min, double tan_max)
       : x{x}, low{clamp(x*tan_min)}, up{clamp(x*tan_max)}
