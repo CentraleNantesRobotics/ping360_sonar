@@ -1,8 +1,6 @@
 #ifndef PING360_SONAR_NODE_H
 #define PING360_SONAR_NODE_H
 
-#define PING360_DEBUG_PUBLISHERS
-
 #include <rclcpp/rclcpp.hpp>
 #include <image_transport/image_transport.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -40,7 +38,8 @@ private:
 
   // sonar i/o
   Ping360Interface sonar{declare_parameter<std::string>("device", "/dev/ttyUSB0"),
-                         static_cast<int>(declare_parameter<int>("baudrate", 115200))}; 
+                         static_cast<int>(declare_parameter<int>("baudrate", 115200)),
+                        declare_parameter<bool>("real_sonar", false)};
   inline void initPublishers(bool image, bool scan, bool echo);
 
   // image params

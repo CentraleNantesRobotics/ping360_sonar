@@ -9,10 +9,7 @@ from brping import pingmessage
 from collections import deque
 
 import os
-if os.getenv('emulated_sonar') == 'true':
-    import Emulator as serial
-else:
-    import serial
+import serial
 
 
 class PingDevice(object):

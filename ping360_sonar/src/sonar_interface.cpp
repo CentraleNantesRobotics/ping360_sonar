@@ -9,12 +9,8 @@ using namespace ping360_sonar;
 
 void Ping360Interface::initialize()
 {
-#ifdef REAL_SONAR
-  if(!sonar.initialize())
-  {
+  if(real_sonar && !sonar.initialize())
     throw std::runtime_error("Cannot initialize sonar");
-  }
-#endif
 }
 
 std::string Ping360Interface::configureAngles(int min, int max, int step)
@@ -62,15 +58,16 @@ void Ping360Interface::configureTransducer(uint8_t gain, uint16_t samples, uint1
     device.transmit_duration = firmwareMinTransmitDuration;
   //device.transmit_duration = std::clamp<int>(target_duration, firmwareMinTransmitDuration, max_duration);
 
-#ifndef REAL_SONAR  
-  if(device.data != nullptr && device.data_length != samples)
+  if(!real_sonar)
+  {
+    if(device.data != nullptr && device.data_length != samples)
       delete[] device.data;
 
-  device.data_length = samples;
+    device.data_length = samples;
 
-  if(device.data == nullptr)
-    device.data = new uint8_t[samples];
-#endif
+    if(device.data == nullptr)
+      device.data = new uint8_t[samples];
+  }
 }
 
 std::pair<bool, bool> Ping360Interface::read()
@@ -82,21 +79,23 @@ std::pair<bool, bool> Ping360Interface::read()
     angle = min_angle;
 
   auto &device{sonar.device_data_data};
-#ifdef REAL_SONAR
-  sonar.set_transducer(device.mode,
-                       device.gain_setting,
-                       angle,
-                       device.transmit_duration,
-                       device.sample_period,
-                       device.transmit_frequency,
-                       device.number_of_samples,
-                       1,
-                       0);
-  return {sonar.waitMessage(Ping360Id::DEVICE_DATA, 8000) != nullptr, end_turn};
-#else
-  // randomly populate data around every pi/2
+  if(real_sonar)
+  {
+    sonar.set_transducer(device.mode,
+                         device.gain_setting,
+                         angle,
+                         device.transmit_duration,
+                         device.sample_period,
+                         device.transmit_frequency,
+                         device.number_of_samples,
+                         1,
+                         0);
+    return {sonar.waitMessage(Ping360Id::DEVICE_DATA, 8000) != nullptr, end_turn};
+  }
+
+  // emulated sonar: randomly populate data around every pi/2
   const auto length{samples()};
-  if(angle % 100 <  100)
+  if(angle % 100 <  20)
   {
     for(int i = 0; i < length; ++i)
       device.data[i] = 120 + rand() % 120;
@@ -109,5 +108,4 @@ std::pair<bool, bool> Ping360Interface::read()
   // simulate transmit duration
   std::this_thread::sleep_for(std::chrono::microseconds(device.transmit_duration));
   return {true, end_turn};
-#endif
 }

@@ -52,7 +52,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
 
   // other, unbounded params
   publish_image = declare_parameter<bool>("publish_image", true);
-  publish_scan = declare_parameter<bool>("publish_scan", true);
+  publish_scan = declare_parameter<bool>("publish_scan", false);
   publish_echo = declare_parameter<bool>("publish_echo", false);
 
   // constant initialization
