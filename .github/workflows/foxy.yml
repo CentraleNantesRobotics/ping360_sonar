@@ -11,6 +11,7 @@ jobs:
           cd / && ./ros_entrypoint.sh
           apt-get update
           apt-get install -y python3-pip ros-foxy-image-transport
+          apt-get install -y libboost-atomic-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev
           pip3 install bluerobotics-ping
       - name: Build package in custom workspace
         run: |
