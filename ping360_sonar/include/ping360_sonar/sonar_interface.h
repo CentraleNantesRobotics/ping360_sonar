@@ -5,25 +5,23 @@
 #include <message/ping-message-ping360.h>
 #include <hal/link/desktop/serial-link.h>
 
-// comment to test with random data
-#define REAL_SONAR
-
 namespace ping360_sonar
 {
 
 class Ping360Interface
 {
 public:
-  Ping360Interface(std::string device, int baudrate) : serial_link(device, baudrate), sonar(serial_link)
+  Ping360Interface(std::string device, int baudrate, bool real_sonar)
+    : serial_link(device, baudrate), sonar(serial_link), real_sonar{real_sonar}
   {}
   void initialize();
-#ifdef REAL_SONAR
   ~Ping360Interface()
   {
+    if(!real_sonar)
+      return;
     sonar.set_motor_off();
     sonar.waitMessage(CommonId::ACK, 1000);
   }
-#endif
   std::pair<bool, bool> read();
 
   std::string configureAngles(int min, int max, int step);
@@ -57,6 +55,7 @@ public:
 private:
   SerialLink serial_link;
   Ping360 sonar;
+  bool real_sonar{false};
   float max_range{};
 
   // angular params

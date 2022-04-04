@@ -6,345 +6,241 @@ from math import cos, pi, sin
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from rclpy.exceptions import ParameterNotDeclaredException
-from rcl_interfaces.msg import SetParametersResult
+from rclpy.executors import SingleThreadedExecutor
+from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor, IntegerRange
 from rclpy.parameter import Parameter
 
-from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
-
 from ping360_sonar_msgs.msg import SonarEcho
-from ping360_sonar.sensor import Ping360
-
+from ping360_sonar.sonar_interface import SonarInterface, Sector
 
 class Ping360_node(Node):
-
+        
     def __init__(self):
-        super().__init__('ping360_node')
-        # declare parameters
+        super().__init__('ping360')
 
-        self.create_timer(0.01, self.timer_callback)  # 100Hz
-        self.ParametersInteger = {
-            'baudrate': 115200,
-            'gain': 0,
-            'transmitFrequency': 740,
-            'queue_size': 1,
-            'maxAngle': 400,
-            'minAngle': 0,
-            'threshold': 200,
-            'numberOfSamples': 200,
-            'step': 1,
-            'imgSize': 500,
-            'speedOfSound': 1500,
-            'sonarRange': 1,
-        }
-        self.ParametersDouble = {
-        }
-        self.ParametersString = {
-            'device': "/dev/ttyUSB0",
-            'frameID': "somar_frame"
-        }
-        self.ParametersBool = {
-            'debug': False,
-            'enableImageTopic': True,
-            'enableScanTopic': True,
-            'enableDataTopic': True,
-            'oscillate': True,
-        }
-
-        for param in self.ParametersInteger.keys():
-            exec(
-                f'self._{param} = self.declare_parameter(\"{param}\", {self.ParametersInteger[param]}).get_parameter_value().integer_value')
-
-        for param in self.ParametersString.keys():
-            exec(
-                f'self._{param} = self.declare_parameter(\"{param}\", \"{self.ParametersString[param]}\").get_parameter_value().string_value')
-
-        for param in self.ParametersDouble.keys():
-            exec(
-                f'self._{param} = self.declare_parameter(\"{param}\", {self.ParametersDouble[param]}).get_parameter_value().double_value')
-
-        for param in self.ParametersBool.keys():
-            exec(
-                f'self._{param} = self.declare_parameter(\"{param}\", {self.ParametersBool[param]}).get_parameter_value().bool_value')
-
-        # get parameters
-        self._samplePeriod = self.calculateSamplePeriod()
-        self._transmitDuration = self.adjustTransmitDuration()
-        self._FOV = self._maxAngle - self._minAngle
-        self._sign = 1
-        self._angle = self._minAngle
-
-        if self._FOV <= 0:
-            self.get_logger().info(
-                f"minAngle should be inferior to the maxAngle! Current settings: minAngle: {self._minAngle} - maxAngle: {self._maxAngle}")
-            rclpy.shutdown()
-
-        if self._step >= self._FOV:
-            self.get_logger().info(
-                f"The configured step is bigger then the set FOV (maxAngle - minAngle). Current settings: step: {self._step} - minAngle: {self._minAngle} - maxAngle: {self._maxAngle} - FOV: {self._FOV}")
-            rclpy.shutdown()
-
-        self._sensor = Ping360(self._device, self._baudrate)
-        self.get_logger().info(f'Initialized Sensor: {self._sensor.initialize()}')
-        self._updated = True
-        self._ranges = [0]
-        self._intensities = [0]
-
-        # self.srv = Server(sonarConfig, callback) // never used in the original python file
-
-        self._bridge = CvBridge()
-        self._center = (float(self._imgSize / 2), float(self._imgSize / 2))
-
-        self._imagePub = self.create_publisher(Image, "/ping360_images", self._queue_size)
-        self._rawPub = self.create_publisher(SonarEcho, "/ping360_data", self._queue_size)
-        self._laserPub = self.create_publisher(LaserScan, "/ping360_scan", self._queue_size)
-
+        # parameters to be declared, will be parsed later
+        # several values mean [default,lower, upper, [step]]
+        parameters = {
+            'gain': [0,0,2],
+            'frequency': 740,
+            'max_angle': [400,200,400],
+            'min_angle': [0,0,200],
+            'scan_threshold': [200,0,255],
+            'samples': [200,10,1000],
+            'angle_step': [1,1,15],
+            'image_size': [500,200,1000],
+            'image_rate': [100, 50, 2000],
+            'speed_of_sound': [1500,1000,2000],
+            'range': [2,1,50],
+            'publish_image': True,
+            'publish_scan': False,
+            'publish_echo': False}
+        
+        for name, value in parameters.items():
+            if type(value) not in (list, tuple):
+                self.declare_parameter(name, value)
+            else:
+                if len(value) == 3:
+                    default, low,up = value
+                    step = 1
+                else:
+                    default, low,up,step = value
+                descriptor = ParameterDescriptor(
+                    name=name,
+                    integer_range = [IntegerRange(from_value=low,
+                                                  to_value=up,
+                                                  step=step)])
+                self.declare_parameter(name,default,descriptor)
+                
+        # init sonar interface
+        self.sonar = SonarInterface(self.declare_parameter('device', '/dev/ttyUSB0').value,
+                                    self.declare_parameter("baudrate", 115200).value,
+                                    self.declare_parameter('real_sonar', False).value)
+                
+        self.image_pub = None
+        self.scan_pub = None
+        self.echo_pub = None
+                
+        # init messages
+        self.sector = Sector()
+        frame = self.declare_parameter("frame", "sonar").value
+        self.image = Image()
+        self.image.header.frame_id = frame
+        self.image.encoding = 'mono8'
+        self.image.is_bigendian = 0
+        self.scan = LaserScan()
+        self.scan.header.frame_id = frame
+        self.scan.range_min = 0.75
+        self.echo = SonarEcho()
+        self.echo.header.frame_id = frame
+        
+        # configure from given params
+        reason = self.configureFromParams()
+        if len(reason):
+            self.get_logger().info(reason)
+            raise(RuntimeError(reason))        
+        
         self.add_on_set_parameters_callback(self.cb_params)
+        
+        self.image_timer = self.create_timer(self.get_parameter('image_rate').value/1000, self.publishImage)
+
+
+    def init_publishers(self, image, scan, echo):
+        
+        self.publish_image = image
+        self.publish_scan = scan
+        self.publish_echo = echo
+        
+        if image and self.image_pub is None:
+            self.image_pub = self.create_publisher(Image, "scan_image", 1)
+            
+        if scan and self.scan_pub is None:
+            self.scan_pub = self.create_publisher(LaserScan, "scan", 1)
+            
+        if echo and self.echo_pub is None:
+            self.echo_pub = self.create_publisher(SonarEcho, "scan_echo", 1)
+    
+    def configureFromParams(self, changes = []):
+        
+        # get current params
+        params = self.get_parameters(["gain","frequency","range",
+                                   "min_angle","max_angle","angle_step",
+                                   "speed_of_sound","samples","image_size", "scan_threshold",
+                                    "publish_image","publish_scan","publish_echo"])
+        params = dict((param.name, param.value) for param in params)        
+        # override with requested changes, if any
+        params.update(dict((param.name, param.value) for param in changes))
+        
+        # start with this as it may be invalid
+        msg = self.sonar.configureAngles(params['min_angle'],params['max_angle'],params['angle_step'])
+        if len(msg):
+            return msg
+        
+        self.init_publishers(params['publish_image'],
+                             params['publish_scan'],
+                             params['publish_echo'])
+        
+        self.sonar.configureTransducer(params["gain"],
+                                       params["samples"],
+                                       params["frequency"],
+                                       params["speed_of_sound"],
+                                       params["range"])
+        self.echo.gain = params["gain"]
+        self.echo.range = params["range"]
+        self.echo.speed_of_sound = params["speed_of_sound"]
+        self.echo.number_of_samples = params["samples"]
+        self.echo.transmit_frequency = params["frequency"]
+
+        self.scan.angle_min = self.sonar.minAngle()
+        self.scan.angle_increment = self.sonar.angleStep()
+        self.scan.angle_max = self.sonar.maxAngle() - self.scan.angle_increment
+        self.scan.range_max = float(params["range"])
+        self.scan.time_increment = self.sonar.transmitDuration()
+
+        size = params['image_size']
+        if size != self.image.step:
+            self.image.step = self.image.width = self.image.height = size
+            self.image.data = [0 for _ in range(size*size)]
+
+        self.sector.configure(params["samples"], size//2)
+        self.scan_threshold = params["scan_threshold"]
+        
+        # no error
+        return ''
+    
+    def now(self):
+        return self.get_clock().now().to_msg()
 
     def cb_params(self, params):
+        reason = self.configureFromParams(params)
+        return SetParametersResult(successful=len(reason) == 0, reason=reason)
+    
+    def refresh(self):
+        
+        valid, end_turn = self.sonar.read()
+        
+        if not valid:
+            return
+        
+        if self.publish_echo:
+            self.publishEcho()
 
-        result = True
-        reason = ""
-        for param in params:
-            self.get_logger().warn(f'Request: {param.name} -> {param.value}')
-            if param.name in self.ParametersDouble:
-                if param.type_ != Parameter.Type.DOUBLE:
-                    self.get_logger().warn("\n"*(len(reason) != 0) + f'Type is not correct for parameter {param.name}, expected double')
-                    reason += "\n"*(len(reason) != 0) + f"wrong data type for {param.name}, expected double"
-                    result = False
+        if self.publish_image:            
+            self.refreshImage()
 
-            elif param.name in self.ParametersString:
-                if param.type_ != Parameter.Type.STRING:
-                    self.get_logger().warn("\n"*(len(reason) != 0) + f'Type is not correct for parameter {param.name}, expected string')
-                    reason += "\n"*(len(reason) != 0) + f"wrong data type for {param.name}, expected string"
-                    result = False
+        if self.publish_scan:
+            self.publishScan(end_turn)                
 
-            elif param.name in self.ParametersBool:
-                if param.type_ != Parameter.Type.BOOL:
-                    self.get_logger().warn("\n"*(len(reason) != 0) + f'Type is not correct for parameter {param.name}, expected bool')
-                    reason += "\n"*(len(reason) != 0) + f"wrong data type for {param.name}, expected bool"
-                    result = False
-
-            elif param.name in self.ParametersInteger:
-                if param.type_ != Parameter.Type.INTEGER:
-                    self.get_logger().warn("\n"*(len(reason) != 0) + f'Type is not correct for parameter {param.name}, expected int')
-                    reason += "\n"*(len(reason) != 0) + f"wrong data type for {param.name}, expected int"
-                    result = False
-
-            else:
-                result = False
-                reason += "\n"*(len(reason) != 0) + f"parameter {param.name} unexpected"
-
-        if result:
-            for param in params:
-                exec(f'self._{param.name} = param.value')
-
-        return SetParametersResult(successful=result, reason=reason)
-
-    def getSonarData(self):
+    def publishEcho(self):
+        # type: (Ping360_node) -> None
         """
-        Transmits the sonar angle and returns the sonar intensities
-        Args:
-            self: Ping360_node class
-        Returns:
-            list: Intensities from 0 to 255
+        Publishes the last raw echo message
         """
-        self._sensor.transmitAngle(self._angle)
-        data = bytearray(getattr(self._sensor, '_data'))
-        return [k for k in data]
+        self.echo.angle = self.sonar.currentAngle()
+        self.echo.intensities = self.sonar.data
+        self.echo.header.stamp = self.now()
+        self.echo_pub.publish(self.echo)
 
-    def generateRawMsg(self, data):
+    def publishScan(self, end_turn):
         """
-        Generates the raw message for the data topic
-        Args:
-            self: Ping360_node class
-            data (list): List of intensities
-        Returns:
-            SonarEcho: message
+        Updates the laserScan message for the scan topic
+        Actually publishes only after the end of each turn
         """
-        msg = SonarEcho()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = self._frameID
-        msg.angle = float(self._angle)
-        msg.gain = self._gain
-        msg.number_of_samples = self._numberOfSamples
-        msg.transmit_frequency = self._transmitFrequency
-        msg.speed_of_sound = self._speedOfSound
-        msg.range = self._sonarRange
-        msg.intensities = data
-        return msg
-
-    def generateScanMsg(self):
-        """
-        Generates the laserScan message for the scan topic
-        Args:
-            self: Ping360_node class
-        Returns:
-            LaserScan: message
-        """
-        msg = LaserScan()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = self._frameID
-        msg.angle_min = 2 * pi * self._minAngle / 400
-        msg.angle_max = 2 * pi * self._maxAngle / 400
-        msg.angle_increment = 2 * pi * self._step / 400
-        msg.time_increment = 0.
-        msg.range_min = .75
-        msg.range_max = float(self._sonarRange)
-        msg.ranges = [float(k) for k in self._ranges]
-        msg.intensities = [float(k) for k in self._intensities]
-
-        return msg
-
-    def publishImage(self, image):
-        try:
-            self._imagePub.publish(self._bridge.cv2_to_imgmsg(image, "mono8"))
-        except CvBridgeError as e:
-            self.get_logger().info("Failed to publish sensor image")
-            print(e)
-
-    def calculateRange(self, index, _samplePeriodTickDuration=25e-9):
-        """
-        Calculate the range based in the duration
-        """
-        return index * self._speedOfSound * _samplePeriodTickDuration * self._samplePeriod / 2
-
-    def calculateSamplePeriod(self, _samplePeriodTickDuration=25e-9):
-        """
-        Calculate the sample period based in the new range
-        """
-        return int(2 * self._sonarRange / (self._numberOfSamples * self._speedOfSound * _samplePeriodTickDuration))
-
-    def adjustTransmitDuration(self, _firmwareMinTransmitDuration=5):
-        # type: (Ping360_node, float) -> float
-        """
-        @brief Adjust the transmit duration for a specific range
-        Per firmware engineer:
-        1. Starting point is TxPulse in usec = ((one-way range in metres) * 8000) / (Velocity of sound in metres
-        per second)
-        2. Then check that TxPulse is wide enough for currently selected sample interval in usec, i.e.,
-            if TxPulse < (2.5 * sample interval) then TxPulse = (2.5 * sample interval)
-            (transmit duration is microseconds, samplePeriod() is nanoseconds)
-        3. Perform limit checking
-        Returns:
-            float: Transmit duration
-        """
-        duration = 8000 * self._sonarRange / self._speedOfSound
-        transmit_duration = max(
-            2.5 * self.getSamplePeriod() / 1000, duration)
-        return int(max(_firmwareMinTransmitDuration, min(self.transmitDurationMax(), transmit_duration)))
-
-    def transmitDurationMax(self, _firmwareMaxTransmitDuration=500):
-        # type: (Ping360_node, float) -> float
-        """
-        @brief The maximum transmit duration that will be applied is limited internally by the
-        firmware to prevent damage to the hardware
-        The maximum transmit duration is equal to 64 * the sample period in microseconds
-
-        Returns:
-            float: The maximum transmit duration possible
-        """
-        return min(_firmwareMaxTransmitDuration, self.getSamplePeriod() * 64e6)
-
-    def getSamplePeriod(self, _samplePeriodTickDuration=25e-9):
-        # type: (Ping360_node, float) -> float
-        """  Sample period in ns """
-        return int(self._samplePeriod * _samplePeriodTickDuration)
-
-    def updateSonarConfig(self):
-        self._sensor.set_gain_setting(self._gain)
-        self._sensor.set_transmit_frequency(self._transmitFrequency)
-        self._sensor.set_transmit_duration(self._transmitDuration)
-        self._sensor.set_sample_period(self._samplePeriod)
-        self._sensor.set_number_of_samples(self._numberOfSamples)
-        self._updated = False
-
-    def dataSelection(self, data):
-        for detectedIntensity in data:
-            if detectedIntensity >= self._threshold:
-                detectedIndex = data.index(detectedIntensity)
-                # The index+1 represents the number of samples which then can be used to deduce the range
-                distance = self.calculateRange(1 + detectedIndex)
-                if 0.75 <= distance <= self._sonarRange:
-                    self._ranges[0] = distance
-                    self._intensities[0] = detectedIntensity
-                    if self._debug:
-                        print(f"Object at {self._angle} grad : {self._ranges[0]}m - {float(self._intensities[0] * 100 / 255)}%")
+        count = self.sonar.angleCount()   
+        cur = len(self.scan.ranges)
+        for _ in range(count - cur):
+            self.scan.ranges.append(0.)
+            self.scan.intensities.append(0.)
+        if cur > count:
+            self.scan.ranges = self.scan.ranges[:count]
+            self.scan.intensities = self.scan.intensities[:count]
+            
+        cur = self.sonar.angleIndex()
+        for i in range(len(self.sonar.data)):
+            if self.sonar.data[i] >= self.scan_threshold:
+                dist = self.sonar.rangeFrom(i)
+                if self.scan.range_min <= dist <= self.scan.range_max:
+                    self.scan.ranges = dist
+                    self.scan.intensities = self.sonar.data[i]/255.
                     break
+        
+        if end_turn:
+            self.scan.header.stamp = self.now()
+            self.scan_pub.publish(self.scan)
+    
+    def refreshImage(self):
+        
+        half_size = self.image.step//2
+        self.sector.init(self.sonar.currentAngle(), self.sonar.angleStep())
+        length = len(self.sonar.data)
+        x = 0
+        y = 0
+        while True:
+            more_points, x, y, index = self.sector.nextPoint(x, y)
+            
+            if index < length:
+                self.image.data[half_size-y + self.image.step*(half_size-x)] = self.sonar.data[index]
+            
+            if not more_points:
+                break
 
-    def buildImage(self, data):
-        image = np.zeros((self._imgSize, self._imgSize, 1), np.uint8)
-        linear_factor = float(len(data)) / float(self._center[0])
-        try:
-            for i in range(int(self._center[0])):
-                if i < self._center[0]:
-                    pointColor = data[int(i * linear_factor - 1)]
-                else:
-                    pointColor = 0
-                for k in np.linspace(0, self._step, 8 * self._step):
-                    theta = 2 * pi * (self._angle + k) / 400.0
-                    x = float(i) * cos(theta)
-                    y = float(i) * sin(theta)
-                    image[int(self._center[0] + x)][int(self._center[1] + y)][0] = pointColor
-        except IndexError:
-            self.get_logger().info(
-                "IndexError: data response was empty, skipping this iteration..")
-            pass
-        return image
-
-    def updateAngle(self):
-        self._angle += self._sign * self._step
-        if self._angle >= self._maxAngle:
-            if not self._oscillate:
-                self._angle = self._minAngle
-            else:
-                self._angle = self._maxAngle
-                self._sign = -1
-
-        if self._angle <= self._minAngle and self._oscillate:
-            self._sign = 1
-            self._angle = self._minAngle
-
-    def timer_callback(self):
-
-        if self._debug:
-            self.get_logger().info('running')
-            # self.get_logger().info(f'{self._samplePeriod}')
-
-        if self._updated:
-            self.updateSonarConfig()
-
-        data = self.getSonarData()
-
-        if self._enableDataTopic:
-            rawDataMsg = self.generateRawMsg(data)
-            self._rawPub.publish(rawDataMsg)
-
-        if self._enableScanTopic:
-            # Get the first high intensity value
-            self.dataSelection(data)
-            # Construct and publish Sonar scan msg
-            scanDataMsg = self.generateScanMsg()
-            self._laserPub.publish(scanDataMsg)
-
-        if self._enableImageTopic:
-            image = self.buildImage(data)
-            self.publishImage(image)
-
-        self.updateAngle()
-
-
-def main():
-    try:
-        rclpy.init()
-    except:
-        pass
-    node = Ping360_node()
-    rclpy.spin(node)
-    rclpy.shutdown()
-
+    def publishImage(self):
+        if self.publish_image:
+            self.image.header.stamp = self.now()
+            self.image_pub.publish(self.image)
 
 if __name__ == "__main__":
-    main()
+    
+    rclpy.init()    
+    node = Ping360_node()
+    executor = SingleThreadedExecutor()
+    executor.add_node(node)
+    
+    while rclpy.ok():
+        node.refresh()
+        executor.spin_once()
+        
+    
+    rclpy.shutdown()
