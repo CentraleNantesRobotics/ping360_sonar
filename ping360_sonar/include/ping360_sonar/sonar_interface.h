@@ -5,6 +5,8 @@
 #include <message/ping-message-ping360.h>
 #include <hal/link/desktop/serial-link.h>
 
+// comment to test with random data
+#define REAL_SONAR
 
 namespace ping360_sonar
 {

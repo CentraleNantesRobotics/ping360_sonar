@@ -62,8 +62,6 @@ void Ping360Interface::configureTransducer(uint8_t gain, uint16_t samples, uint1
     device.transmit_duration = firmwareMinTransmitDuration;
   //device.transmit_duration = std::clamp<int>(target_duration, firmwareMinTransmitDuration, max_duration);
 
-  std::cout << "transmit duration is " << device.transmit_duration << " ms " << std::endl;
-
 #ifndef REAL_SONAR  
   if(device.data != nullptr && device.data_length != samples)
       delete[] device.data;

@@ -9,7 +9,6 @@ endif()
 
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
-option(REAL_SONAR "REAL_SONAR" ON)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)

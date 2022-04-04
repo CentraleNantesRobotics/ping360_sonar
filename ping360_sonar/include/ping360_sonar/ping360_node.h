@@ -4,6 +4,7 @@
 #define PING360_DEBUG_PUBLISHERS
 
 #include <rclcpp/rclcpp.hpp>
+#include <image_transport/image_transport.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <ping360_sonar_msgs/msg/sonar_echo.hpp>
@@ -46,7 +47,7 @@ private:
   // image params
   bool publish_image{};
   Sector sector;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub;
+  image_transport::Publisher image_pub;
   sensor_msgs::msg::Image image;
   void configureMessageFomParams();
   void refreshImage();

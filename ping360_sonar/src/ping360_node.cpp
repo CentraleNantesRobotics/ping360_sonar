@@ -26,9 +26,6 @@ struct BoundedParam
   }
 };
 
-/* the sensor data cannot be used as if apparently, need to find a fix for accessing them as as is the seem to always be 0 */
-/* is the node actually using the overwritten function _handlemessage? */
-
 Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
 { 
@@ -137,8 +134,8 @@ void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
   publish_image = image;
   publish_scan = scan;
 
-  if(publish_image && image_pub == nullptr)
-    image_pub = create_publisher<sensor_msgs::msg::Image>("scan_image", qos);
+  if(publish_image && image_pub.getTopic().empty())
+    image_pub = image_transport::create_publisher(this, "scan_image");
 
   if(publish_echo && echo_pub == nullptr)
     echo_pub = create_publisher<ping360_sonar_msgs::msg::SonarEcho>("scan_echo", qos);
@@ -270,7 +267,7 @@ void Ping360Sonar::refresh()
   if(publish_echo && echo_pub->get_subscription_count())
     publishEcho(now);
 
-  if(publish_image && image_pub->get_subscription_count())
+  if(publish_image)
     refreshImage();
 
   if(publish_scan && scan_pub->get_subscription_count())
@@ -279,9 +276,9 @@ void Ping360Sonar::refresh()
 
 void Ping360Sonar::publishImage()
 {
-  if(publish_image && image_pub->get_subscription_count())
+  if(publish_image)
   {
     image.header.set__stamp(now());
-    image_pub->publish(image);
+    image_pub.publish(image);
   }
 }
