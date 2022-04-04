@@ -28,7 +28,8 @@ Get the latest stable release [here](https://github.com/CentraleNantesRobotics/p
 #### Dependencies
 
 - [Robot Operating System (ROS) 2](http://wiki.ros.org) (middleware for robotics),
-- [cv_bridge]
+- [ping-cpp] as a submodule
+- [image_tranport]
 
 #### Building
 
