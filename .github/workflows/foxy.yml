@@ -1,0 +1,27 @@
+name: ROS foxy CI
+on: [push]
+jobs:    
+  build:
+    runs-on: ubuntu-20.04
+    container: ros:foxy-ros-base
+    steps:
+      - uses: actions/checkout@v3
+        with: 
+          submodules: 'true'
+      - name: Install package dependencies
+        run: |
+          cd / && ./ros_entrypoint.sh
+          apt-get update
+          apt-get install -y python3-pip ros-foxy-image-transport
+          apt-get install -y libboost-atomic-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev
+          pip3 install bluerobotics-ping
+      - name: Build package in custom workspace
+        run: |
+          mkdir -p ~/ros2/src
+          cd ~/ros2
+          cp -r $GITHUB_WORKSPACE ./src          
+          /bin/bash -c "source /opt/ros/foxy/setup.bash && colcon build"
+      #- name: Lint
+        #run: |
+          #cd ~/ros2/src
+          #catkin build ping360_sonar --catkin-make-args roslint
