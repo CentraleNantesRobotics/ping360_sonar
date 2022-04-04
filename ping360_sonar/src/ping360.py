@@ -42,7 +42,8 @@ class Ping360_node(Node):
         self.ParametersDouble = {
         }
         self.ParametersString = {
-            'device': "/dev/ttyUSB0"
+            'device': "/dev/ttyUSB0",
+            'frameID': "somar_frame"
         }
         self.ParametersBool = {
             'debug': False,
@@ -96,9 +97,9 @@ class Ping360_node(Node):
         self._bridge = CvBridge()
         self._center = (float(self._imgSize / 2), float(self._imgSize / 2))
 
-        self._imagePub = self.create_publisher(Image, "/ping360_node/sonar/images", self._queue_size)
-        self._rawPub = self.create_publisher(SonarEcho, "/ping360_node/sonar/data", self._queue_size)
-        self._laserPub = self.create_publisher(LaserScan, "/ping360_node/sonar/scan", self._queue_size)
+        self._imagePub = self.create_publisher(Image, "/ping360_images", self._queue_size)
+        self._rawPub = self.create_publisher(SonarEcho, "/ping360_data", self._queue_size)
+        self._laserPub = self.create_publisher(LaserScan, "/ping360_scan", self._queue_size)
 
         self.add_on_set_parameters_callback(self.cb_params)
 
@@ -165,7 +166,7 @@ class Ping360_node(Node):
         """
         msg = SonarEcho()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'sonar_frame'
+        msg.header.frame_id = self._frameID
         msg.angle = float(self._angle)
         msg.gain = self._gain
         msg.number_of_samples = self._numberOfSamples
@@ -185,7 +186,7 @@ class Ping360_node(Node):
         """
         msg = LaserScan()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'sonar_frame'
+        msg.header.frame_id = self._frameID
         msg.angle_min = 2 * pi * self._minAngle / 400
         msg.angle_max = 2 * pi * self._maxAngle / 400
         msg.angle_increment = 2 * pi * self._step / 400
