@@ -10,7 +10,7 @@ jobs:
         run: |
           cd / && ./ros_entrypoint.sh
           apt-get update
-          apt-get install -y python3-pip
+          apt-get install -y python3-pip ros-foxy-image-transport
           pip3 install bluerobotics-ping
       - name: Build package in custom workspace
         run: |

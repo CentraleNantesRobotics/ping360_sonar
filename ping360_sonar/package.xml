@@ -17,7 +17,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
   
-  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
   <depend>rclcpp</depend>
   <depend>rclcpy</depend>
   <depend>sensor_msgs</depend>
