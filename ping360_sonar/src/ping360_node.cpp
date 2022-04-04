@@ -32,7 +32,6 @@ struct BoundedParam
 Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
 { 
-
   sonar.initialize();
 
   // bounded parameters
@@ -105,7 +104,6 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
       for(auto &param: params)
         mapping[param.get_name()] = param.as_bool();
     }
-
   }
   // override with new ones
   for(auto &param: new_params)
@@ -261,9 +259,7 @@ void Ping360Sonar::refreshImage()
 void Ping360Sonar::refresh()
 {
   const auto &[valid, end_turn] = sonar.read(); {}
-  if(end_turn)
-  std::cout << "end turn @ " << sonar.transmitDuration() << " s " <<std::endl;
-
+  
   if(!valid)
   {
     RCLCPP_WARN(get_logger(), "Cannot communicate with sonar");
