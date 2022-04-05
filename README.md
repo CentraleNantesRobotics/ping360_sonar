@@ -29,7 +29,7 @@ Get the latest stable release [here](https://github.com/CentraleNantesRobotics/p
 
 - [Robot Operating System (ROS) 2](http://wiki.ros.org) (middleware for robotics),
 - [deployment branch of ping-cpp](https://github.com/GSO-soslab/ping-cpp.git) as a submodule
-- [image_tranport](http://wiki.ros.org/image_transport) for the C++ node
+- [image_transport](http://wiki.ros.org/image_transport) for the C++ node
 
 #### Building
 
