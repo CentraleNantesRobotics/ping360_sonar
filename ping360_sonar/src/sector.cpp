@@ -1,4 +1,5 @@
 #include <ping360_sonar/sector.h>
+#include <iostream>
 
 using namespace ping360_sonar;
 
@@ -11,7 +12,7 @@ void Sector::init(float angle, float angle_step)
   const auto angle_max{angle+angle_step/2};
 
   // get x-bounds for this angular range
-  const auto &[xmin, xmax] = xLimits(angle_min, angle_max); {}
+  const auto &[xmin, xmax,same_side] = xLimits(angle_min, angle_max); {}
   bounds.clear();
   bounds.reserve(xmax-xmin+1);
 
@@ -19,9 +20,8 @@ void Sector::init(float angle, float angle_step)
   auto tm{tan(angle_min)};
   auto tM{tan(angle_max)};
 
-  if(xmin * xmax >= 0)
+  if(same_side)
   {
-    // same side
     if(std::abs(tm) > std::abs(tM))
       std::swap(tm,tM);
     for(auto x = xmin; x <= xmax; ++x)
@@ -29,8 +29,8 @@ void Sector::init(float angle, float angle_step)
   }
   else
   {
-    // forward around pi/2, backward around 3pi/2
-    const auto direction = fabs(angle-M_PI/2) < fabs(angle-3*M_PI/2) ? 1 : -1;
+    // forward around pi/2, backward around -pi/2
+    const auto direction = fabs(angle-M_PI/2) < fabs(angle+M_PI/2) ? 1 : -1;
     if(direction == -1)
       std::swap(tm,tM);
     for(auto x = xmin; x < 0; ++x)
@@ -42,9 +42,10 @@ void Sector::init(float angle, float angle_step)
   cur = bounds.end();
 }
 
-std::pair<int, int> Sector::xLimits(float angle_min, float angle_max)
+std::tuple<int, int,bool> Sector::xLimits(float angle_min, float angle_max)
 {
   auto cm{cos(angle_min)}, cM{cos(angle_max)};
+  const auto same_side{cm*cM >= 0};
   if(cM < cm)
     std::swap(cm,cM);
   if(cm * cM > 0)
@@ -55,7 +56,8 @@ std::pair<int, int> Sector::xLimits(float angle_min, float angle_max)
       cm = 0;
   }
   return {Bound::clamp(radius*cm),
-        Bound::clamp(radius*cM)};
+        Bound::clamp(radius*cM),
+        same_side};
 }
 
 bool Sector::nextPoint(int &x, int &y, int &index)

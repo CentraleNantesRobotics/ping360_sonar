@@ -34,7 +34,7 @@ private:
   OnSetParametersCallbackHandle::SharedPtr param_change;
   SetParametersResult parametersCallback(const std::vector<rclcpp::Parameter> &parameters);
   IntParams updatedParams(const std::vector<rclcpp::Parameter> &new_params) const;
-  std::string configureFromParams(const std::vector<rclcpp::Parameter> &new_params = {});
+  void configureFromParams(const std::vector<rclcpp::Parameter> &new_params = {});
 
   // helper functions to declare and describe parameters
   template <typename ParamType>

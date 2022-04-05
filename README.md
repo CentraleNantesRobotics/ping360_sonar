@@ -87,17 +87,13 @@ The rotation of the sonar is only limited by the maximum range (hence the echo m
 
 The list below corresponds to the output of `ros2 param describe` for all `ping360` parameters:
 
-- `angle_max`
+- `angle_sector`
     - Type: integer
-    - Description: Sonar max angle [grad]
-    - Default value: 400 [200..400]
-- `angle_min`
-    - Type: integer
-    - Description: Sonar min angle [grad]
-    - Default value: 0 [0..200]
+    - Description: Scanned angular sector around sonar heading [degrees]. Will oscillate if not 360
+    - Default value: 360 [60..360]
 - `angle_step`
     - Type: integer
-    - Description: Sonar angular step [grad]
+    - Description: Sonar angular resolution [degrees]
     - Default value: 1 [1..20]
 - `baudrate`
     - Type: integer
@@ -145,10 +141,6 @@ The list below corresponds to the output of `ros2 param describe` for all `ping3
     - Type: integer
     - Description: Sonar max range [m]
     - Default value: 2 [1..50]
-- `samples`
-    - Type: integer
-    - Description: Sonar samples
-    - Default value: 200 [100..1000]
 - `scan_image.format`
     - Type: string
     - Description: Compression method
@@ -168,7 +160,7 @@ The list below corresponds to the output of `ros2 param describe` for all `ping3
 - `speed_of_sound`
     - Type: integer
     - Description: Speed of sound [m/s]
-    - Default value: 1500 [1000..2000]
+    - Default value: 1500 [1450..1550]
 
 Most the parameters can be updated during execution, except `baudrate`, `device`, `frame`, `image_rate` and `fallback_emulated`.
 

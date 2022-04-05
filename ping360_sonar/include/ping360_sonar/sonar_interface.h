@@ -21,8 +21,8 @@ public:
   }
   std::pair<bool, bool> read();
 
-  std::string configureAngles(int min, int max, int step);
-  void configureTransducer(uint8_t gain, uint16_t samples, uint16_t frequency, uint16_t speed_of_sound, float range);
+  std::pair<int, int> configureAngles(int aperture_deg, int step_deg, bool align_step);
+  void configureTransducer(uint8_t gain, uint16_t frequency, uint16_t speed_of_sound, float range);
 
   inline float rangeFrom(int index) const
   {
@@ -32,8 +32,14 @@ public:
   inline float angleMax() const {return grad2rad(angle_max);}
   inline float angleStep() const {return grad2rad(angle_step);}
   inline float currentAngle() const {return grad2rad(angle);}
-  inline size_t angleCount() const {return (angle_max-angle_min-1)/angle_step;}
-  inline size_t angleIndex() const {return (angle-angle_min)/angle_step;}
+  inline size_t angleCount() const {return (angle_max-angle_min)/abs(angle_step);}
+  inline size_t angleIndex() const
+  {
+    if(angle_step > 0)
+      return (angle-angle_min)/angle_step;
+    return (angle-angle_max)/angle_step;
+  }
+  bool updateAngle();
 
   inline uint16_t samples() const
   {
@@ -56,8 +62,10 @@ private:
   float max_range{};
 
   // angular params
+  bool oscillate;
   int angle_min{}, angle_max{}, angle_step{};
   int angle{};
+
 
   static inline float grad2rad(int grad)
   {

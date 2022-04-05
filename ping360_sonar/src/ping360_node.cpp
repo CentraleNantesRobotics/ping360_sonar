@@ -16,13 +16,11 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   declareParamDescription("gain", 0, "Sonar gain (0 = low, 1 = normal, 2 = high)", 0, 2);
   declareParamDescription("frequency", 740, "Sonar operating frequency [kHz]", 650, 850);
   declareParamDescription("range_max", 2, "Sonar max range [m]", 1, 50);
-  declareParamDescription("samples", 200, "Sonar samples", 100, 1000);
-  declareParamDescription("angle_min", 0, "Sonar min angle [grad]", 0, 200);
-  declareParamDescription("angle_max", 400, "Sonar max angle [grad]", 200, 400);
-  declareParamDescription("angle_step", 1, "Sonar angular step [grad]", 1, 20);
+  declareParamDescription("angle_sector", 360, "Scanned angular sector around sonar heading [degrees]. Will oscillate if not 360", 60, 360);
+  declareParamDescription("angle_step", 1, "Sonar angular resolution [degrees]", 1, 20);
   declareParamDescription("image_size", 300, "Output image size [pixels]", 100, 1000, 2);
   declareParamDescription("scan_threshold", 200, "Intensity threshold for LaserScan message", 1, 255);
-  declareParamDescription("speed_of_sound", 1500, "Speed of sound [m/s]", 1000, 2000);
+  declareParamDescription("speed_of_sound", 1500, "Speed of sound [m/s]", 1450, 1550);
   declareParamDescription("image_rate", 100, "Image publishing rate [ms]", 50, 2000);
 
   // other, unbounded params
@@ -40,9 +38,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   echo.header.set__frame_id(frame);
 
   // ROS interface
-  const auto reason{configureFromParams()};
-  if(!reason.empty())
-    throw std::runtime_error(reason);
+  configureFromParams();
 
   const auto image_rate_ms{get_parameter("image_rate").as_int()};
   image_timer = this->create_wall_timer(std::chrono::milliseconds(image_rate_ms),
@@ -58,8 +54,8 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
   using ParamType = rclcpp::ParameterType;
   const std::map<ParamType,vector<string>> mutable_params{
     {ParamType::PARAMETER_INTEGER,{"gain","frequency","range_max",
-                                   "angle_min","angle_max","angle_step",
-                                   "speed_of_sound","samples","image_size", "scan_threshold"}},
+                                   "angle_sector","angle_step",
+                                   "speed_of_sound","image_size", "scan_threshold"}},
     {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
 
   IntParams mapping;
@@ -91,10 +87,8 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
 
 SetParametersResult Ping360Sonar::parametersCallback(const vector<rclcpp::Parameter> &parameters)
 {
-  SetParametersResult result;
-  result.reason = configureFromParams(parameters);
-  result.successful = result.reason.empty();
-  return result;
+  configureFromParams(parameters);
+  return SetParametersResult().set__successful(true);
 }
 
 void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
@@ -119,24 +113,28 @@ void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
     scan_pub = create_publisher<sensor_msgs::msg::LaserScan>("scan", qos);
 }
 
-std::string Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_params)
+void Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_params)
 {
   // get current params updated with new ones, if any
   const auto params{updatedParams(new_params)};
 
-  // ensure parameters are valid before reconfiguring
-  const auto msg{sonar.configureAngles(params.at("angle_min"),
-                                       params.at("angle_max"),
-                                       params.at("angle_step"))};
-  if(!msg.empty())
-    return msg;
+  // forward to configuration
+  const auto [angle_sector, step] = sonar.configureAngles(params.at("angle_sector"),
+      params.at("angle_step"),
+      params.at("publish_scan")); {}
+  // inform if requested angle config cannot be met because of gradians
+  if(angle_sector != params.at("angle_sector") || step != params.at("angle_step"))
+  {
+    RCLCPP_INFO(get_logger(),
+                "Due to sonar using gradians, sector is %i (requested %i) and step is %i (requested %i)",
+                angle_sector, params.at("angle_sector"), step, params.at("angle_step"));
+  }
 
   initPublishers(params.at("publish_image"),
                  params.at("publish_scan"),
                  params.at("publish_echo"));
 
   sonar.configureTransducer(params.at("gain"),
-                            params.at("samples"),
                             params.at("frequency"),
                             params.at("speed_of_sound"),
                             params.at("range_max"));
@@ -145,27 +143,24 @@ std::string Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &n
   echo.set__gain(params.at("gain"));
   echo.set__range(params.at("range_max"));
   echo.set__speed_of_sound(params.at("speed_of_sound"));
-  echo.set__number_of_samples(params.at("samples"));
+  echo.set__number_of_samples(sonar.samples());
   echo.set__transmit_frequency(params.at("frequency"));
 
-  scan.set__angle_min(sonar.angleMin());
-  scan.set__angle_increment(sonar.angleStep());
-  scan.set__angle_max(sonar.angleMax() - scan.angle_increment);
   scan.set__range_max(params.at("range_max"));
   scan.set__time_increment(sonar.transmitDuration());
 
-  const int size{params.at("image_size")};
-  if(size != static_cast<int>(image.step))
+  const int size{params.at("image_size")};  
+  if(size != static_cast<int>(image.step) ||
+     std::any_of(new_params.begin(), new_params.end(),
+                 [](const auto &param){return param.get_name() == "angle_sector";}))
   {
     image.data.resize(size*size);
     std::fill(image.data.begin(), image.data.end(), 0);
     image.height = image.width = image.step = size;
   }
 
-  sector.configure(params.at("samples"), size/2);
+  sector.configure(sonar.samples(), size/2);
   scan_threshold = params.at("scan_threshold");
-
-  return {};
 }
 
 
@@ -207,6 +202,19 @@ void Ping360Sonar::publishScan(const rclcpp::Time &now, bool end_turn)
 
   if(end_turn)
   {
+    if(sonar.angleStep() < 0)
+    {
+      // now going negative: scan was positive
+      scan.set__angle_max(sonar.angleMax());
+      scan.set__angle_min(sonar.angleMin());
+    }
+    else
+    {
+      // now going positive: scan was negative
+      scan.set__angle_max(sonar.angleMin());
+      scan.set__angle_min(sonar.angleMax());
+    }
+    scan.set__angle_increment(-sonar.angleStep());
     scan.header.set__stamp(now);
     scan_pub->publish(scan);
   }
@@ -218,7 +226,7 @@ void Ping360Sonar::refreshImage()
   if(length == 0) return;
   const auto half_size{image.step/2};
 
-  sector.init(sonar.currentAngle(), sonar.angleStep());
+  sector.init(sonar.currentAngle(), fabs(sonar.angleStep()));
   int x{}, y{}, index{};
 
   while(sector.nextPoint(x, y, index))

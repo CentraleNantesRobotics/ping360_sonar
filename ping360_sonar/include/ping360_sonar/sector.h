@@ -39,7 +39,7 @@ class Sector
   float dr{};
   std::vector<Bound> bounds;
   std::vector<Bound>::iterator cur;
-  std::pair<int, int> xLimits(float angle_min, float angle_max);
+  std::tuple<int, int, bool> xLimits(float angle_min, float angle_max);
 
 public:
 
