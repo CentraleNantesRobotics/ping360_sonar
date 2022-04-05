@@ -7,15 +7,25 @@ constexpr static float maxDurationRatio{64e6};
 
 using namespace ping360_sonar;
 
-void Ping360Interface::initialize()
+
+Ping360Interface::Ping360Interface(std::string device, int baudrate, bool fallback)
+  : serial_link(device, baudrate), sonar(serial_link)
 {
-  if(real_sonar && !sonar.initialize())
+  // try to init the real sonar anyway
+  if(sonar.initialize())
+  {
+    real_sonar = true;
+    return;
+  }
+  if(!fallback)
     throw std::runtime_error("Cannot initialize sonar");
+
+  real_sonar = false;
 }
 
 std::string Ping360Interface::configureAngles(int min, int max, int step)
 {
-  if(min_angle == min && max_angle == max && step_angle == step)
+  if(angle_min == min && angle_max == max && angle_step == step)
     return {};
 
   if(max <= min || (max - min) % step != 0)
@@ -26,9 +36,9 @@ std::string Ping360Interface::configureAngles(int min, int max, int step)
   }
 
   angle = min;
-  min_angle = min;
-  max_angle = max;
-  step_angle = step;
+  angle_min = min;
+  angle_max = max;
+  angle_step = step;
   return {};
 }
 
@@ -73,10 +83,10 @@ void Ping360Interface::configureTransducer(uint8_t gain, uint16_t samples, uint1
 std::pair<bool, bool> Ping360Interface::read()
 {
   // update angle before ping in order to stay sync
-  angle += step_angle;
-  const auto end_turn{angle + step_angle == max_angle};
-  if(angle == max_angle)
-    angle = min_angle;
+  angle += angle_step;
+  const auto end_turn{angle + angle_step == angle_max};
+  if(angle == angle_max)
+    angle = angle_min;
 
   auto &device{sonar.device_data_data};
   if(real_sonar)
@@ -93,16 +103,13 @@ std::pair<bool, bool> Ping360Interface::read()
     return {sonar.waitMessage(Ping360Id::DEVICE_DATA, 8000) != nullptr, end_turn};
   }
 
-  // emulated sonar: randomly populate data around every pi/2
+  // emulated sonar: randomly populate data
   const auto length{samples()};
-  if(angle % 100 <  20)
+  for(int i = 0; i < length; ++i)
   {
-    for(int i = 0; i < length; ++i)
+    if(rand() % length + length < 1.1*i + abs(angle - 200))
       device.data[i] = 120 + rand() % 120;
-  }
-  else
-  {
-    for(int i = 0; i < length; ++i)
+    else
       device.data[i] = 0;
   }
   // simulate transmit duration

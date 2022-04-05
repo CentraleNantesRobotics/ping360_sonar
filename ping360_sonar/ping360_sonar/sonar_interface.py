@@ -10,27 +10,27 @@ class SonarInterface:
     firmwareMaxTransmitDuration = 500
     maxDurationRatio = 64e6
     
-    def __init__(self, port, baudrate, real_sonar):
-        
+    def __init__(self, port, baudrate, fallback_emulated):
+                
         try:
             self.sonar = Ping360(port, baudrate)
-            if real_sonar and not self.sonar.initialize():
-                raise RuntimeError('Cannot instanciate sonar')
+            if self.sonar.initialize():
+                return
         except:
-            if real_sonar:
-                raise RuntimeError('Cannot initialize sonar')
-            print('Using emulated sonar')
-            self.sonar = None
-            
-        self.real_sonar = real_sonar
+            pass
+        
+        if not fallback_emulated:
+            raise RuntimeError('Cannot initialize sonar')
+        print('Using emulated sonar')
+        self.sonar = None
         
     def configureAngles(self, min_angle, max_angle, step):
         
         if max_angle <= min_angle or (max_angle-min_angle) % step != 0:
             return f'inconsistent angular settings: angular range is [{min_angle} - {max_angle}] while step is {step}'
-        self.min_angle = min_angle
-        self.max_angle = max_angle
-        self.step = step
+        self.angle_min = min_angle
+        self.angle_max = max_angle
+        self.angle_step = step
         self.angle = min_angle
         return ''
     
@@ -39,17 +39,17 @@ class SonarInterface:
         return grad*pi/200
     
     def minAngle(self):
-        return self.grad2rad(self.min_angle)
+        return self.grad2rad(self.angle_min)
     def maxAngle(self):
-        return self.grad2rad(self.max_angle)
+        return self.grad2rad(self.angle_max)
     def angleStep(self):
-        return self.grad2rad(self.step)
+        return self.grad2rad(self.angle_step)
     def currentAngle(self):
         return self.grad2rad(self.angle)
     def angleCount(self):
-        return (self.max_angle-self.min_angle-1)//self.step
+        return (self.angle_max-self.angle_min-1)//self.angle_step
     def angleIndex(self):
-        return (self.angle-self.min_angle)//self.step
+        return (self.angle-self.angle_min)//self.angle_step
     def rangeFrom(self, index):
         return (index+1)*self.max_range/self.samples
     
@@ -78,12 +78,12 @@ class SonarInterface:
             
     def read(self):
         # update angle before transmit
-        self.angle += self.step
-        end_turn = self.angle + self.step == self.max_angle
-        if self.angle == self.max_angle:
-            self.angle = self.min_angle
+        self.angle += self.angle_step
+        end_turn = self.angle + self.angle_step == self.angle_max
+        if self.angle == self.angle_max:
+            self.angle = self.angle_min
         
-        if self.real_sonar:            
+        if self.sonar is not None:
              self.sonar.control_transducer(
                     0,  # reserved
                     self.gain,
@@ -100,13 +100,13 @@ class SonarInterface:
         
         # emulated sonar
         from random import randint
-        from time import sleep        
-        if self.angle % 100 < 100:
-            self.data = [randint(0,255) for _ in range(self.samples)]
-        else:
-            self.data = [0 for _ in range(self.samples)]
+        from time import sleep    
+        self.data = [0 for _ in range(self.samples)]
+        for i in range(self.samples):
+            if randint(self.samples,2*self.samples) < 1.1*i + abs(self.angle - 200):
+                self.data[i] = randint(220, 255)
         # emulate transmit duration in microseconds
-        sleep(self.transmit_duration/1000000)
+        #sleep(self.transmit_duration/1000000)
         return (True, end_turn)
 
 

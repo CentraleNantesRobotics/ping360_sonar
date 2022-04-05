@@ -25,15 +25,15 @@ class Ping360_node(Node):
         parameters = {
             'gain': [0,0,2],
             'frequency': 740,
-            'max_angle': [400,200,400],
-            'min_angle': [0,0,200],
+            'angle_max': [400,200,400],
+            'angle_min': [0,0,200],
             'scan_threshold': [200,0,255],
             'samples': [200,10,1000],
             'angle_step': [1,1,15],
             'image_size': [500,200,1000],
             'image_rate': [100, 50, 2000],
             'speed_of_sound': [1500,1000,2000],
-            'range': [2,1,50],
+            'range_max': [2,1,50],
             'publish_image': True,
             'publish_scan': False,
             'publish_echo': False}
@@ -57,7 +57,7 @@ class Ping360_node(Node):
         # init sonar interface
         self.sonar = SonarInterface(self.declare_parameter('device', '/dev/ttyUSB0').value,
                                     self.declare_parameter("baudrate", 115200).value,
-                                    self.declare_parameter('real_sonar', False).value)
+                                    self.declare_parameter('fallback_emulated', True).value)
                 
         self.image_pub = None
         self.scan_pub = None
@@ -105,8 +105,8 @@ class Ping360_node(Node):
     def configureFromParams(self, changes = []):
         
         # get current params
-        params = self.get_parameters(["gain","frequency","range",
-                                   "min_angle","max_angle","angle_step",
+        params = self.get_parameters(["gain","frequency","range_max",
+                                   "angle_min","angle_max","angle_step",
                                    "speed_of_sound","samples","image_size", "scan_threshold",
                                     "publish_image","publish_scan","publish_echo"])
         params = dict((param.name, param.value) for param in params)        
@@ -114,7 +114,7 @@ class Ping360_node(Node):
         params.update(dict((param.name, param.value) for param in changes))
         
         # start with this as it may be invalid
-        msg = self.sonar.configureAngles(params['min_angle'],params['max_angle'],params['angle_step'])
+        msg = self.sonar.configureAngles(params['angle_min'],params['angle_max'],params['angle_step'])
         if len(msg):
             return msg
         
@@ -126,9 +126,9 @@ class Ping360_node(Node):
                                        params["samples"],
                                        params["frequency"],
                                        params["speed_of_sound"],
-                                       params["range"])
+                                       params["range_max"])
         self.echo.gain = params["gain"]
-        self.echo.range = params["range"]
+        self.echo.range = params["range_max"]
         self.echo.speed_of_sound = params["speed_of_sound"]
         self.echo.number_of_samples = params["samples"]
         self.echo.transmit_frequency = params["frequency"]
@@ -136,7 +136,7 @@ class Ping360_node(Node):
         self.scan.angle_min = self.sonar.minAngle()
         self.scan.angle_increment = self.sonar.angleStep()
         self.scan.angle_max = self.sonar.maxAngle() - self.scan.angle_increment
-        self.scan.range_max = float(params["range"])
+        self.scan.range_max = float(params["range_max"])
         self.scan.time_increment = self.sonar.transmitDuration()
 
         size = params['image_size']

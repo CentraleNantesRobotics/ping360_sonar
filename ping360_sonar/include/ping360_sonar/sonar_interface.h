@@ -11,10 +11,7 @@ namespace ping360_sonar
 class Ping360Interface
 {
 public:
-  Ping360Interface(std::string device, int baudrate, bool real_sonar)
-    : serial_link(device, baudrate), sonar(serial_link), real_sonar{real_sonar}
-  {}
-  void initialize();
+  Ping360Interface(std::string device, int baudrate, bool fallback);
   ~Ping360Interface()
   {
     if(!real_sonar)
@@ -31,12 +28,12 @@ public:
   {
     return (index+1)*max_range/samples();
   }
-  inline float minAngle() const {return grad2rad(min_angle);}
-  inline float maxAngle() const {return grad2rad(max_angle);}
-  inline float angleStep() const {return grad2rad(step_angle);}
+  inline float angleMin() const {return grad2rad(angle_min);}
+  inline float angleMax() const {return grad2rad(angle_max);}
+  inline float angleStep() const {return grad2rad(angle_step);}
   inline float currentAngle() const {return grad2rad(angle);}
-  inline size_t angleCount() const {return (max_angle-min_angle-1)/step_angle;}
-  inline size_t angleIndex() const {return (angle-min_angle)/step_angle;}
+  inline size_t angleCount() const {return (angle_max-angle_min-1)/angle_step;}
+  inline size_t angleIndex() const {return (angle-angle_min)/angle_step;}
 
   inline uint16_t samples() const
   {
@@ -59,7 +56,7 @@ private:
   float max_range{};
 
   // angular params
-  int min_angle{}, max_angle{}, step_angle{};
+  int angle_min{}, angle_max{}, angle_step{};
   int angle{};
 
   static inline float grad2rad(int grad)

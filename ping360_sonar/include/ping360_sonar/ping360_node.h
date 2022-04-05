@@ -36,10 +36,36 @@ private:
   IntParams updatedParams(const std::vector<rclcpp::Parameter> &new_params) const;
   std::string configureFromParams(const std::vector<rclcpp::Parameter> &new_params = {});
 
+  // helper functions to declare and describe parameters
+  template <typename ParamType>
+  inline ParamType declareParamDescription(std::string name,
+                                           ParamType default_value,
+                                           std::string description)
+  {
+    rcl_interfaces::msg::ParameterDescriptor descriptor;
+    descriptor.set__name(name).set__description(description);
+    return declare_parameter<ParamType>(name, default_value, descriptor);
+  }
+  inline int declareParamDescription(std::string name,
+                                     int default_value,
+                                     std::string description,
+                                     int lower,
+                                     int upper,
+                                     int step = 1)
+  {
+    rcl_interfaces::msg::ParameterDescriptor descriptor;
+    descriptor.set__name(name).set__description(description);
+    descriptor.integer_range = {rcl_interfaces::msg::IntegerRange()
+                                .set__from_value(lower)
+                                .set__to_value(upper)
+                                .set__step(step)};
+    return declare_parameter<int>(name, default_value, descriptor);
+  }
+
   // sonar i/o
   Ping360Interface sonar{declare_parameter<std::string>("device", "/dev/ttyUSB0"),
-                         static_cast<int>(declare_parameter<int>("baudrate", 115200)),
-                        declare_parameter<bool>("real_sonar", false)};
+        static_cast<int>(declare_parameter<int>("baudrate", 115200)),
+        declareParamDescription("fallback_emulated", true, "Emulates a sonar if Ping360 cannot be initialized")};
   inline void initPublishers(bool image, bool scan, bool echo);
 
   // image params
