@@ -60,7 +60,7 @@ The rotation of the sonar is only limited by the maximum range (hence the echo m
 * **`scan_image`** ([sensor_msgs/Image])
 
 	The generated sonar image in gray level. Each pixel is filled depending on the range and angular step of the sonar.
-	This topic can be toggled using the **publish_image** parameter. The C++ node uses [image_tranport](http://wiki.ros.org/image_transport) while the Python one publishes raw images.
+	This topic can be toggled using the **publish_image** parameter. The C++ node uses [image_transport](http://wiki.ros.org/image_transport) while the Python one publishes raw images.
 
 * **`echo`** ([msg/SonarEcho])
 
