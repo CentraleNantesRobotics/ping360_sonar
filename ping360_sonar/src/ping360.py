@@ -25,11 +25,9 @@ class Ping360_node(Node):
         parameters = {
             'gain': [0,0,2],
             'frequency': 740,
-            'angle_max': [400,200,400],
-            'angle_min': [0,0,200],
+            'angle_sector': [360,60,360],
             'scan_threshold': [200,0,255],
-            'samples': [200,10,1000],
-            'angle_step': [1,1,15],
+            'angle_step': [1,1,20],
             'image_size': [500,200,1000],
             'image_rate': [100, 50, 2000],
             'speed_of_sound': [1500,1000,2000],
@@ -77,10 +75,7 @@ class Ping360_node(Node):
         self.echo.header.frame_id = frame
         
         # configure from given params
-        reason = self.configureFromParams()
-        if len(reason):
-            self.get_logger().info(reason)
-            raise(RuntimeError(reason))        
+        self.configureFromParams()
         
         self.add_on_set_parameters_callback(self.cb_params)
         
@@ -106,56 +101,53 @@ class Ping360_node(Node):
         
         # get current params
         params = self.get_parameters(["gain","frequency","range_max",
-                                   "angle_min","angle_max","angle_step",
-                                   "speed_of_sound","samples","image_size", "scan_threshold",
+                                   "angle_sector","angle_step",
+                                   "speed_of_sound","image_size", "scan_threshold",
                                     "publish_image","publish_scan","publish_echo"])
         params = dict((param.name, param.value) for param in params)        
         # override with requested changes, if any
         params.update(dict((param.name, param.value) for param in changes))
         
         # start with this as it may be invalid
-        msg = self.sonar.configureAngles(params['angle_min'],params['angle_max'],params['angle_step'])
-        if len(msg):
-            return msg
+        self.sonar.configureAngles(params['angle_sector'],
+                                   params['angle_step'],
+                                   params['publish_scan'])
         
         self.init_publishers(params['publish_image'],
                              params['publish_scan'],
                              params['publish_echo'])
         
         self.sonar.configureTransducer(params["gain"],
-                                       params["samples"],
                                        params["frequency"],
                                        params["speed_of_sound"],
                                        params["range_max"])
         self.echo.gain = params["gain"]
         self.echo.range = params["range_max"]
         self.echo.speed_of_sound = params["speed_of_sound"]
-        self.echo.number_of_samples = params["samples"]
+        self.echo.number_of_samples = self.sonar.samples
         self.echo.transmit_frequency = params["frequency"]
 
-        self.scan.angle_min = self.sonar.minAngle()
-        self.scan.angle_increment = self.sonar.angleStep()
-        self.scan.angle_max = self.sonar.maxAngle() - self.scan.angle_increment
         self.scan.range_max = float(params["range_max"])
         self.scan.time_increment = self.sonar.transmitDuration()
+        self.scan.angle_min = self.sonar.angleMin()
+        self.scan.angle_max = self.sonar.angleMax()
+        self.scan.angle_increment = self.sonar.angleStep()
 
         size = params['image_size']
-        if size != self.image.step:
+        if size != self.image.step or any([param.name == 'angle_sector' for param in changes]):
             self.image.step = self.image.width = self.image.height = size
             self.image.data = [0 for _ in range(size*size)]
 
-        self.sector.configure(params["samples"], size//2)
+        self.sector.configure(self.sonar.samples, size//2)
         self.scan_threshold = params["scan_threshold"]
         
-        # no error
-        return ''
     
     def now(self):
         return self.get_clock().now().to_msg()
 
     def cb_params(self, params):
-        reason = self.configureFromParams(params)
-        return SetParametersResult(successful=len(reason) == 0, reason=reason)
+        self.configureFromParams(params)
+        return SetParametersResult(successful=True)
     
     def refresh(self):
         
@@ -207,6 +199,18 @@ class Ping360_node(Node):
                     break
         
         if end_turn:
+            if not self.sonar.fullScan():
+                if self.sonar.angleStep() < 0:
+                    # now going negative: scan was positive
+                    self.scan.angle_max = sonar.angleMax()
+                    self.scan.angle_min = sonar.angleMin()
+                else:                    
+                    # now going positive: scan was negative
+                    self.scan.angle_max = sonar.angleMin()
+                    self.scan.angle_min = sonar.angleMax()
+                self.scan.angle_increment = -sonar.angleStep()
+                self.scan.angle_max -= self.scan.angle_increment
+                
             self.scan.header.stamp = self.now()
             self.scan_pub.publish(self.scan)
     
