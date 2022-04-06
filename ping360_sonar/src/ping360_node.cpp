@@ -148,8 +148,11 @@ void Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_para
 
   scan.set__range_max(params.at("range_max"));
   scan.set__time_increment(sonar.transmitDuration());
+  scan.set__angle_max(sonar.angleMax());
+  scan.set__angle_min(sonar.angleMin());
+  scan.set__angle_increment(sonar.angleStep());
 
-  const int size{params.at("image_size")};  
+  const int size{params.at("image_size")};
   if(size != static_cast<int>(image.step) ||
      std::any_of(new_params.begin(), new_params.end(),
                  [](const auto &param){return param.get_name() == "angle_sector";}))
@@ -202,19 +205,23 @@ void Ping360Sonar::publishScan(const rclcpp::Time &now, bool end_turn)
 
   if(end_turn)
   {
-    if(sonar.angleStep() < 0)
+    if(!sonar.fullScan())
     {
-      // now going negative: scan was positive
-      scan.set__angle_max(sonar.angleMax());
-      scan.set__angle_min(sonar.angleMin());
+      if(sonar.angleStep() < 0)
+      {
+        // now going negative: scan was positive
+        scan.set__angle_max(sonar.angleMax());
+        scan.set__angle_min(sonar.angleMin());
+      }
+      else
+      {
+        // now going positive: scan was negative
+        scan.set__angle_max(sonar.angleMin());
+        scan.set__angle_min(sonar.angleMax());
+      }
+      scan.set__angle_increment(-sonar.angleStep());
+      scan.angle_max -= scan.angle_increment;
     }
-    else
-    {
-      // now going positive: scan was negative
-      scan.set__angle_max(sonar.angleMin());
-      scan.set__angle_min(sonar.angleMax());
-    }
-    scan.set__angle_increment(-sonar.angleStep());
     scan.header.set__stamp(now);
     scan_pub->publish(scan);
   }

@@ -68,7 +68,7 @@ std::pair<int, int> Ping360Interface::configureAngles(int aperture_deg, int step
 
   angle_min = -best_half_aperture;
   angle_max = best_half_aperture;
-  if(angle_max == 200) // full scan
+  if(fullScan())
     angle_max -= angle_step;
 
   // check current angle wrt. new config
@@ -132,14 +132,12 @@ void Ping360Interface::configureTransducer(uint8_t gain, uint16_t frequency, uin
 bool Ping360Interface::updateAngle()
 {
   angle += angle_step;
-  if(angle_min == -200)
-  {    
-    // full scan
-    const auto end_turn{angle >= angle_max};
-    const auto ended_before{angle >= angle_max+angle_step};
-    if(ended_before)
+  if(fullScan())
+  {
+    const auto end_turn{angle + angle_step > angle_max};
+    if(angle > angle_max)
       angle = angle_min;
-    return end_turn && !ended_before;
+    return end_turn;
   }
 
   // sector scan, check near end of sector

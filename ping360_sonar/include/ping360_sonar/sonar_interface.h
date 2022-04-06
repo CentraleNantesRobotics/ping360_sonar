@@ -28,6 +28,7 @@ public:
   {
     return (index+1)*max_range/samples();
   }
+  inline bool fullScan() const {return angle_min == -200;}
   inline float angleMin() const {return grad2rad(angle_min);}
   inline float angleMax() const {return grad2rad(angle_max);}
   inline float angleStep() const {return grad2rad(angle_step);}
