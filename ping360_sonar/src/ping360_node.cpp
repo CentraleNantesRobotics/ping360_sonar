@@ -56,7 +56,7 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
   const std::map<ParamType,vector<string>> mutable_params{
     {ParamType::PARAMETER_INTEGER,{"gain","frequency","range_max",
                                    "angle_sector","angle_step",
-                                   "speed_of_sound","image_size", "scan_threshold"}},
+                                   "speed_of_sound","image_size", "scan_threshold", "sonar_timeout"}},
     {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
 
   IntParams mapping;
