@@ -167,7 +167,7 @@ std::pair<bool, bool> Ping360Interface::read()
                          device.number_of_samples,
                          1,
                          0);
-    return {sonar.waitMessage(Ping360Id::DEVICE_DATA, 8000) != nullptr, end_turn};
+    return {sonar.waitMessage(Ping360Id::DEVICE_DATA, timeout) != nullptr, end_turn};
   }
 
   // emulated sonar: randomly populate data

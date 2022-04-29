@@ -161,6 +161,10 @@ The list below corresponds to the output of `ros2 param describe` for all `ping3
     - Type: integer
     - Description: Speed of sound [m/s]
     - Default value: 1500 [1450..1550]
+- `sonar_timeout`
+	- Type: integer
+	- Description: Sonar timeout [ms]
+	- Default value: 8000 [0...20000]
 
 Most the parameters can be updated during execution, except `baudrate`, `device`, `frame`, `image_rate` and `fallback_emulated`.
 

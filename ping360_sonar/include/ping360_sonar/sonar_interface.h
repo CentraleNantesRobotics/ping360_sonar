@@ -42,6 +42,9 @@ public:
   }
   bool updateAngle();
 
+  void setTimeout(int newTimeout){timeout = newTimeout;}
+  int getTimeout(){return timeout;}
+
   inline uint16_t samples() const
   {
     return sonar.device_data_data.number_of_samples;
@@ -66,6 +69,7 @@ private:
   bool oscillate;
   int angle_min{}, angle_max{}, angle_step{};
   int angle{};
+  int timeout{8000};
 
 
   static inline float grad2rad(int grad)

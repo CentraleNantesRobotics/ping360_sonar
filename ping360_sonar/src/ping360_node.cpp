@@ -22,6 +22,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   declareParamDescription("scan_threshold", 200, "Intensity threshold for LaserScan message", 1, 255);
   declareParamDescription("speed_of_sound", 1500, "Speed of sound [m/s]", 1450, 1550);
   declareParamDescription("image_rate", 100, "Image publishing rate [ms]", 50, 2000);
+  declareParamDescription("sonar_timeout", 8000, "Sonar timeout [ms]", 0, 20000);
 
   // other, unbounded params
   publish_image = declareParamDescription("publish_image", true, "Publish images on 'scan_image'");
@@ -55,7 +56,7 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
   const std::map<ParamType,vector<string>> mutable_params{
     {ParamType::PARAMETER_INTEGER,{"gain","frequency","range_max",
                                    "angle_sector","angle_step",
-                                   "speed_of_sound","image_size", "scan_threshold"}},
+                                   "speed_of_sound","image_size", "scan_threshold", "sonar_timeout"}},
     {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
 
   IntParams mapping;
@@ -138,6 +139,7 @@ void Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_para
                             params.at("frequency"),
                             params.at("speed_of_sound"),
                             params.at("range_max"));
+  sonar.setTimeout(params.at("sonar_timeout"));
 
   // forward to message meta-data
   echo.set__gain(params.at("gain"));
