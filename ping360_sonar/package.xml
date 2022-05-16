@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <package format="3">
   <name>ping360_sonar</name>
-  <version>2.0.1</version> 
+  <version>2.0.1</version>
   <description>A ROS 2 package for Blue Robotics Ping360 Sonar</description>
 
   <url type="website">http://wiki.ros.org/ping360_sonar</url>
@@ -16,10 +16,10 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
-  
+
   <depend>image_transport</depend>
   <depend>rclcpp</depend>
-  <depend>rclcpy</depend>
+  <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>ping360_sonar_msgs</depend>
