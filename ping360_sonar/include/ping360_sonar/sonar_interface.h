@@ -4,6 +4,7 @@
 #include <device/ping-device-ping360.h>
 #include <message/ping-message-ping360.h>
 #include <hal/link/desktop/serial-link.h>
+#include <hal/link/desktop/udp-link.h>
 
 namespace ping360_sonar
 {
@@ -11,13 +12,13 @@ namespace ping360_sonar
 class Ping360Interface
 {
 public:
-  Ping360Interface(std::string device, int baudrate, bool fallback);
+  Ping360Interface(std::string device, int baudrate, bool fallback, std::string connection_type, std::string udp_address, int udp_port);
   ~Ping360Interface()
   {
     if(!real_sonar)
       return;
-    sonar.set_motor_off();
-    sonar.waitMessage(CommonId::ACK, 1000);
+    sonar->set_motor_off();
+    sonar->waitMessage(CommonId::ACK, 1000);
   }
   std::pair<bool, bool> read();
 
@@ -47,21 +48,22 @@ public:
 
   inline uint16_t samples() const
   {
-    return sonar.device_data_data.number_of_samples;
+    return sonar->device_data_data.number_of_samples;
   }
   inline std::pair<const uint8_t*, uint16_t> intensities() const
   {
-    return {sonar.device_data_data.data, sonar.device_data_data.data_length};
+    return {sonar->device_data_data.data, sonar->device_data_data.data_length};
   }
   inline double transmitDuration() const
   {
     // micro to seconds
-    return sonar.device_data_data.transmit_duration/1e6;
+    return sonar->device_data_data.transmit_duration/1e6;
   }
 
 private:
-  SerialLink serial_link;
-  Ping360 sonar;
+  std::unique_ptr<SerialLink> serial_link;
+  std::unique_ptr<UdpLink> udp_link;
+  std::unique_ptr<Ping360> sonar;
   bool real_sonar{false};
   float max_range{};
 
