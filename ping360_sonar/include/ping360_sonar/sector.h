@@ -4,6 +4,8 @@
 #include <map>
 #include <math.h>
 #include <vector>
+#include <stdint.h>
+
 
 namespace ping360_sonar
 {
