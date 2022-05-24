@@ -28,7 +28,8 @@ Get the latest stable release [here](https://github.com/CentraleNantesRobotics/p
 #### Dependencies
 
 - [Robot Operating System (ROS) 2](http://wiki.ros.org) (middleware for robotics),
-- [deployment branch of ping-cpp](https://github.com/GSO-soslab/ping-cpp.git) as a submodule
+- [deployment branch of ping-cpp](https://github.com/GSO-soslab/ping-cpp.git), for the C++ node as a submodule
+- [deployment branch of ping-python](https://github.com/bluerobotics/ping-python), for the Python node as a package to install 
 - [image_transport](http://wiki.ros.org/image_transport) for the C++ node
 
 #### Building

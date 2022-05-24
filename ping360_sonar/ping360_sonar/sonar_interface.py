@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from ping360_sonar.sensor import Ping360
+from brping import Ping360
 from numpy import pi, sqrt, tan, cos, sign
 from brping import definitions
 
@@ -13,11 +13,16 @@ class SonarInterface:
     firmwareMinSamplePeriod = 80
     maxDurationRatio = 64e6
     
-    def __init__(self, port, baudrate, fallback_emulated):
+    def __init__(self, port, baudrate, fallback_emulated, connection_type, udp_address, udp_port):
                 
         self.angle = 0
+        self.sonar = Ping360()
         try:
-            self.sonar = Ping360(port, baudrate)
+            if connection_type == "serial":
+                self.sonar.connect_serial(port, baudrate)
+            elif connection_type == "udp":
+                self.sonar.connect_udp(udp_address, udp_port)
+                
             if self.sonar.initialize():
                 return
         except:
