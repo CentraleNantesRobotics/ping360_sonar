@@ -96,10 +96,14 @@ The list below corresponds to the output of `ros2 param describe` for all `ping3
     - Type: integer
     - Description: Sonar angular resolution [degrees]
     - Default value: 1 [1..20]
-- `baudrate`
+- `baudrate` (only used in serial connection)
     - Type: integer
     - Default value: 115200
-- `device`
+- `connection_type`
+    - Type: string
+    - Description: Indicates if connection is serial or udp
+    - Default value: serial
+- `device` (only used in serial connection)
     - Type: string
     - Default value: /dev/ttyUSB0
 - `fallback_emulated`
@@ -166,6 +170,12 @@ The list below corresponds to the output of `ros2 param describe` for all `ping3
 	- Type: integer
 	- Description: Sonar timeout [ms]
 	- Default value: 8000 [0...20000]
+- `udp_address` (only used in udp connection)
+  - Type: string
+  - Default value: 0.0.0.0
+- `udp_port` (only used in udo connection)
+  - Type: integer
+  - Default value: 12345
 
 Most the parameters can be updated during execution, except `baudrate`, `device`, `frame`, `image_rate` and `fallback_emulated`.
 

@@ -11,11 +11,21 @@ constexpr static float maxDurationRatio{64e6};
 using namespace ping360_sonar;
 
 
-Ping360Interface::Ping360Interface(std::string device, int baudrate, bool fallback)
-  : serial_link(device, baudrate), sonar(serial_link)
+Ping360Interface::Ping360Interface(std::string device, int baudrate, bool fallback, std::string connection_type, std::string udp_address, int udp_port)
 {
+  if(connection_type.compare("serial") == 0)
+  {
+    serial_link = std::make_unique<SerialLink>(device, baudrate);
+    sonar = std::make_unique<Ping360>(*serial_link.get());
+  }
+  else if(connection_type.compare("udp") ==0)
+  {
+    udp_link = std::make_unique<UdpLink>(udp_address, std::to_string(udp_port));
+    sonar = std::make_unique<Ping360>(*udp_link.get());
+  }
+
   // try to init the real sonar anyway
-  if(sonar.initialize())
+  if(sonar->initialize())
   {
     real_sonar = true;
     return;
@@ -82,7 +92,7 @@ std::pair<int, int> Ping360Interface::configureAngles(int aperture_deg, int step
 void Ping360Interface::configureTransducer(uint8_t gain, uint16_t frequency, uint16_t speed_of_sound, float range)
 {
   max_range = range;
-  auto &device{sonar.device_data_data};
+  auto &device{sonar->device_data_data};
   device.mode = 1;
   device.gain_setting = gain;
   device.transmit_frequency = frequency;
@@ -154,11 +164,12 @@ std::pair<bool, bool> Ping360Interface::read()
   // update angle before ping in order to stay sync
   const auto end_turn = updateAngle();
 
-  auto &device{sonar.device_data_data};
+  auto &device{sonar->device_data_data};
+
   if(real_sonar)
   {
     std::cout << device.transmit_duration << std::endl;
-    sonar.set_transducer(device.mode,
+    sonar->set_transducer(device.mode,
                          device.gain_setting,
                          angle > 0 ? angle : angle+400,
                          device.transmit_duration,
@@ -167,7 +178,7 @@ std::pair<bool, bool> Ping360Interface::read()
                          device.number_of_samples,
                          1,
                          0);
-    return {sonar.waitMessage(Ping360Id::DEVICE_DATA, timeout) != nullptr, end_turn};
+    return {sonar->waitMessage(Ping360Id::DEVICE_DATA, timeout) != nullptr, end_turn};
   }
 
   // emulated sonar: randomly populate data
