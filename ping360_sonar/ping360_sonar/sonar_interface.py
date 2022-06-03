@@ -147,7 +147,7 @@ class SonarInterface:
             self.sonar.control_transducer(
                     0,  # reserved
                     self.gain,
-                    self.angle,
+                    self.angle if self.angle >= 0 else self.angle + 400,
                     self.transmit_duration,
                     self.sample_period,
                     self.frequency,
