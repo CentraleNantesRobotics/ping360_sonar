@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ROS 2 version of Python node
 from math import cos, pi, sin
