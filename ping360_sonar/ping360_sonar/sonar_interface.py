@@ -17,6 +17,7 @@ class SonarInterface:
                 
         self.angle = 0
         self.sonar = Ping360()
+        self.max_range = 0.
         try:
             if connection_type == "serial":
                 self.sonar.connect_serial(port, baudrate)
@@ -84,9 +85,12 @@ class SonarInterface:
         return (self.angle-self.angle_max)//self.angle_step
     def rangeFrom(self, index):
         return (index+1)*self.max_range/self.samples
+    def fullScan(self):
+        return self.angle_min == -200
     
     def configureTransducer(self, gain, frequency, speed_of_sound, max_range):
         
+        self.max_range = max_range
         self.gain = gain
         self.frequency = frequency
         

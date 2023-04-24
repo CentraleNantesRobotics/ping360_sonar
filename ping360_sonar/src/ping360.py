@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ROS 2 version of Python node
 from math import cos, pi, sin
@@ -183,6 +183,7 @@ class Ping360_node(Node):
         Updates the laserScan message for the scan topic
         Actually publishes only after the end of each turn
         """
+        angle = self.sonar.angleIndex()
         count = self.sonar.angleCount()   
         cur = len(self.scan.ranges)
         for _ in range(count - cur):
@@ -197,21 +198,21 @@ class Ping360_node(Node):
             if self.sonar.data[i] >= self.scan_threshold:
                 dist = self.sonar.rangeFrom(i)
                 if self.scan.range_min <= dist <= self.scan.range_max:
-                    self.scan.ranges = dist
-                    self.scan.intensities = self.sonar.data[i]/255.
+                    self.scan.ranges[angle] = dist
+                    self.scan.intensities[angle] = self.sonar.data[i]/255.
                     break
         
         if end_turn:
             if not self.sonar.fullScan():
                 if self.sonar.angleStep() < 0:
                     # now going negative: scan was positive
-                    self.scan.angle_max = sonar.angleMax()
-                    self.scan.angle_min = sonar.angleMin()
+                    self.scan.angle_max = self.sonar.angleMax()
+                    self.scan.angle_min = self.sonar.angleMin()
                 else:                    
                     # now going positive: scan was negative
-                    self.scan.angle_max = sonar.angleMin()
-                    self.scan.angle_min = sonar.angleMax()
-                self.scan.angle_increment = -sonar.angleStep()
+                    self.scan.angle_max = self.sonar.angleMin()
+                    self.scan.angle_min = self.sonar.angleMax()
+                self.scan.angle_increment = -self.sonar.angleStep()
                 self.scan.angle_max -= self.scan.angle_increment
                 
             self.scan.header.stamp = self.now()
