@@ -28,6 +28,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   publish_image = declareParamDescription("publish_image", true, "Publish images on 'scan_image'");
   publish_scan = declareParamDescription("publish_scan", false, "Publish laserscans on 'scan'");
   publish_echo = declareParamDescription("publish_echo", false, "Publish raw echo on 'scan_echo'");
+  publish_distance = declareParamDescription("publish_distance", true, "Publish estimated distance on 'estimated_distance'");
 
   // constant initialization
   const auto frame{declareParamDescription<string>("frame", "sonar", "Frame ID of the message headers")};
@@ -57,7 +58,7 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
     {ParamType::PARAMETER_INTEGER,{"gain","frequency","range_max",
                                    "angle_sector","angle_step",
                                    "speed_of_sound","image_size", "scan_threshold", "sonar_timeout"}},
-    {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
+    {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo", "publish_distance"}}};
 
   IntParams mapping;
   for(const auto &[type,names]: mutable_params)
@@ -92,7 +93,7 @@ SetParametersResult Ping360Sonar::parametersCallback(const vector<rclcpp::Parame
   return SetParametersResult().set__successful(true);
 }
 
-void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
+void Ping360Sonar::initPublishers(bool image, bool scan, bool echo, bool distance)
 {
 #ifdef PING360_PUBLISH_RELIABLE
   const auto qos{rclcpp::QoS(5)};
@@ -103,6 +104,7 @@ void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
   publish_echo = echo;
   publish_image = image;
   publish_scan = scan;
+  publish_distance = distance;
 
   if(publish_image && image_pub.getTopic().empty())
     image_pub = image_transport::create_publisher(this, "scan_image");
@@ -112,6 +114,9 @@ void Ping360Sonar::initPublishers(bool image, bool scan, bool echo)
 
   if(publish_scan && scan_pub == nullptr)
     scan_pub = create_publisher<sensor_msgs::msg::LaserScan>("scan", qos);
+
+  if(publish_distance && distance_pub == nullptr)
+    distance_pub = create_publisher<std_msgs::msg::Float32>("estimated_distance", qos);
 }
 
 void Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_params)
@@ -133,7 +138,8 @@ void Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_para
 
   initPublishers(params.at("publish_image"),
                  params.at("publish_scan"),
-                 params.at("publish_echo"));
+                 params.at("publish_echo"),
+                 params.at("publish_distance"));
 
   sonar.configureTransducer(params.at("gain"),
                             params.at("frequency"),
@@ -264,6 +270,9 @@ void Ping360Sonar::refresh()
 
   if(publish_scan && scan_pub->get_subscription_count())
     publishScan(now, end_turn);
+
+  if(publish_distance && distance_pub->get_subscription_count())
+    publishDistance();
 }
 
 void Ping360Sonar::publishImage()
@@ -274,3 +283,29 @@ void Ping360Sonar::publishImage()
     image_pub.publish(image);
   }
 }
+
+void Ping360Sonar::publishDistance()
+{
+  if(publish_distance)
+  {
+    const auto [data, length] = sonar.intensities(); {}
+    float estimated = 0.f;
+
+    for(int index = 0; index < length; index++)
+    {
+      if(data[index] >= scan_threshold)
+      {
+        if(const auto range{sonar.rangeFrom(index)};
+           range >= scan.range_min && range < scan.range_max)
+        {
+          estimated = range;
+          break;
+        }
+      }
+    }
+
+    distance.data = estimated;
+    distance_pub->publish(distance);
+  }
+}
+

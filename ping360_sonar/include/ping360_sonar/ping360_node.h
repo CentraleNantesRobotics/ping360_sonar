@@ -1,6 +1,7 @@
 #ifndef PING360_SONAR_NODE_H
 #define PING360_SONAR_NODE_H
 
+#include "std_msgs/msg/float32.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include <image_transport/image_transport.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -69,7 +70,7 @@ private:
         declareParamDescription<std::string>("connection_type", "serial", "If connection is via serial or udp"),
         declareParamDescription<std::string>("udp_address", "0.0.0.0", "Udp address"),
         declareParamDescription<int>("udp_port", 12345, "Udp port")};
-  inline void initPublishers(bool image, bool scan, bool echo);
+  inline void initPublishers(bool image, bool scan, bool echo, bool distance);
 
   // image params
   bool publish_image{};
@@ -92,6 +93,12 @@ private:
   rclcpp::Publisher<ping360_sonar_msgs::msg::SonarEcho>::SharedPtr echo_pub;
   SonarEcho echo;
   void publishEcho(const rclcpp::Time &now);
+
+  // distance estimate
+  bool publish_distance {};
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr distance_pub;
+  std_msgs::msg::Float32 distance;
+  void publishDistance();
 };
 }
 
