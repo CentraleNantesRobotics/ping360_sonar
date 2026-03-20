@@ -272,7 +272,7 @@ void Ping360Sonar::refresh()
     publishScan(now, end_turn);
 
   if(publish_distance && distance_pub->get_subscription_count())
-    publishDistance();
+    publishDistance(end_turn);
 }
 
 void Ping360Sonar::publishImage()
@@ -284,28 +284,33 @@ void Ping360Sonar::publishImage()
   }
 }
 
-void Ping360Sonar::publishDistance()
+void Ping360Sonar::publishDistance(bool end_turn)
 {
   if(publish_distance)
   {
+    constexpr float min_range = 0.2f;
     const auto [data, length] = sonar.intensities(); {}
-    float estimated = 0.f;
 
     for(int index = 0; index < length; index++)
     {
       if(data[index] >= scan_threshold)
       {
         if(const auto range{sonar.rangeFrom(index)};
-           range >= scan.range_min && range < scan.range_max)
+           range >= min_range && range < scan.range_max)
         {
-          estimated = range;
-          break;
+          distance_sum += range;
+          distance_count++;
         }
       }
     }
 
-    distance.data = estimated;
-    distance_pub->publish(distance);
+    if(end_turn && distance_count > 0)
+    {
+      distance.data = distance_sum / static_cast<float>(distance_count);
+      distance_pub->publish(distance);
+      distance_sum = 0.f;
+      distance_count = 0;
+    }
   }
 }
 

@@ -96,9 +96,11 @@ private:
 
   // distance estimate
   bool publish_distance {};
+  float distance_sum = 0.f;
+  int distance_count = 0;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr distance_pub;
   std_msgs::msg::Float32 distance;
-  void publishDistance();
+  void publishDistance(bool end_turn);
 };
 }
 
