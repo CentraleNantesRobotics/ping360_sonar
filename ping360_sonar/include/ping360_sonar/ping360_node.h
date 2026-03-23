@@ -8,6 +8,10 @@
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <ping360_sonar_msgs/msg/sonar_echo.hpp>
 #include <rcl_interfaces/msg/set_parameters_result.hpp>
+#include <vector>
+#include <utility>
+#include <cstdint>
+#include <cmath>
 
 #include <ping360_sonar/sector.h>
 #include <ping360_sonar/sonar_interface.h>
@@ -62,6 +66,10 @@ private:
                                 .set__step(step)};
     return declare_parameter<int>(name, default_value, descriptor);
   }
+
+  // Utility method for convolving 1D signal
+  static std::vector<uint8_t> convolveLoG(const std::pair<const uint8_t*, uint16_t>& data,
+                                                       const std::vector<double>& kernel);
 
   // sonar i/o
   Ping360Interface sonar{declare_parameter<std::string>("device", "/dev/ttyUSB0"),

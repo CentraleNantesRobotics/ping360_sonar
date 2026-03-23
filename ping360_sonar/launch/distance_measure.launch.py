@@ -12,7 +12,8 @@ def generate_launch_description():
         parameters = [
             {"range_max": 1},
             {"angle_sector": 120}
-        ]
+        ],
+        output = "screen"
     )
 
     ld.add_action(pingNode)

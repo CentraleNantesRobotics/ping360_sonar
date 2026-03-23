@@ -241,13 +241,22 @@ void Ping360Sonar::refreshImage()
   if(length == 0) return;
   const auto half_size{image.step/2};
 
+  // Pass a Laplacian of Gaussians along the ray
+  std::vector<double> kernel = {-1.0, 4.0, -1.0};
+  std::vector<uint8_t> filtered = convolveLoG({data, length}, kernel);
+  std::cout << "Input data: \n" 
+            << static_cast<int>(data[0]) << " " << static_cast<int>(data[1]) << " " << static_cast<int>(data[2]) << "\n"
+            << "Filtered data: \n"
+            << static_cast<int>(filtered[0]) << " " << static_cast<int>(filtered[1]) << " " << static_cast<int>(filtered[2])
+            << std::endl;
+
   sector.init(sonar.currentAngle(), fabs(sonar.angleStep()));
   int x{}, y{}, index{};
 
   while(sector.nextPoint(x, y, index))
   {
     if(index < length)
-      image.data[half_size-y + image.step*(half_size-x)] = data[index];
+      image.data[half_size-y + image.step*(half_size-x)] = filtered[index];
   }
 }
 
@@ -314,3 +323,60 @@ void Ping360Sonar::publishDistance(bool end_turn)
   }
 }
 
+// Convolve uint8 buffer with kernel
+std::vector<uint8_t> Ping360Sonar::convolveLoG(const std::pair<const uint8_t*, uint16_t>& data,
+                                              const std::vector<double>& kernel)
+{
+  const uint8_t* input = data.first;
+    uint16_t length = data.second;
+
+    int ksize = kernel.size();
+    int half = ksize / 2;
+
+    std::vector<double> temp(length, 0.0);
+
+    // Step 1: Convolution (same as before)
+    for (uint16_t i = 0; i < length; ++i)
+    {
+        double sum = 0.0;
+
+        for (int k = -half; k <= half; ++k)
+        {
+            int idx = static_cast<int>(i) + k;
+
+            // Clamp boundaries
+            if (idx < 0) idx = 0;
+            if (idx >= length) idx = length - 1;
+
+            sum += kernel[k + half] * static_cast<double>(input[idx]);
+        }
+
+        temp[i] = sum;
+    }
+
+    // Step 2: Find min and max
+    double min_val = temp[0];
+    double max_val = temp[0];
+
+    for (double v : temp)
+    {
+        if (v < min_val) min_val = v;
+        if (v > max_val) max_val = v;
+    }
+
+    // Avoid division by zero
+    double range = max_val - min_val;
+    if (range == 0.0)
+        range = 1.0;
+
+    // Step 3: Normalize to [0, 255]
+    std::vector<uint8_t> output(length);
+
+    for (uint16_t i = 0; i < length; ++i)
+    {
+        double normalized = (temp[i] - min_val) / range;  // [0,1]
+        output[i] = static_cast<uint8_t>(normalized * 255.0);
+    }
+
+    return output;
+}
