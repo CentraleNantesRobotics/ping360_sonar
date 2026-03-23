@@ -35,6 +35,7 @@ ament_target_dependencies(ping360_node rclcpp sensor_msgs ping360_sonar_msgs ima
 # Install
 ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS src/ping360.py DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME})
 #install(DIRECTORY python/ping360_sonar DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS ping360_node ping-cpp
