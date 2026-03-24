@@ -242,13 +242,14 @@ void Ping360Sonar::refreshImage()
   const auto half_size{image.step/2};
 
   // Pass a Laplacian of Gaussians along the ray
-  std::vector<double> kernel = {-1.0, 4.0, -1.0};
+  std::vector<double> kernel = {-1.0, -3.0, 8.0, 8.0, -3.0, -1.0};
   std::vector<uint8_t> filtered = convolveLoG({data, length}, kernel);
   std::cout << "Input data: \n" 
             << static_cast<int>(data[0]) << " " << static_cast<int>(data[1]) << " " << static_cast<int>(data[2]) << "\n"
             << "Filtered data: \n"
             << static_cast<int>(filtered[0]) << " " << static_cast<int>(filtered[1]) << " " << static_cast<int>(filtered[2])
             << std::endl;
+  const uint8_t placeholder = 100;
 
   sector.init(sonar.currentAngle(), fabs(sonar.angleStep()));
   int x{}, y{}, index{};
@@ -256,7 +257,10 @@ void Ping360Sonar::refreshImage()
   while(sector.nextPoint(x, y, index))
   {
     if(index < length)
-      image.data[half_size-y + image.step*(half_size-x)] = filtered[index];
+      if (index >= 80 && filtered[index] >= 125)
+        {
+          image.data[half_size-y + image.step*(half_size-x)] = filtered[index];
+        }
   }
 }
 
@@ -325,7 +329,7 @@ void Ping360Sonar::publishDistance(bool end_turn)
 
 // Convolve uint8 buffer with kernel
 std::vector<uint8_t> Ping360Sonar::convolveLoG(const std::pair<const uint8_t*, uint16_t>& data,
-                                              const std::vector<double>& kernel)
+                                               const std::vector<double>& kernel)
 {
   const uint8_t* input = data.first;
     uint16_t length = data.second;
