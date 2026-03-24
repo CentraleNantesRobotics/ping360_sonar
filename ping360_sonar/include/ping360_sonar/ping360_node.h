@@ -12,6 +12,7 @@
 #include <utility>
 #include <cstdint>
 #include <cmath>
+#include <Eigen/Dense>
 
 #include <ping360_sonar/sector.h>
 #include <ping360_sonar/sonar_interface.h>
@@ -70,6 +71,10 @@ private:
   // Utility method for convolving 1D signal
   static std::vector<uint8_t> convolveLoG(const std::pair<const uint8_t*, uint16_t>& data,
                                                        const std::vector<double>& kernel);
+
+  static int find_index(const std::vector<uint8_t>& v);
+
+  std::vector<int> dist_index_buffer;
 
   // sonar i/o
   Ping360Interface sonar{declare_parameter<std::string>("device", "/dev/ttyUSB0"),

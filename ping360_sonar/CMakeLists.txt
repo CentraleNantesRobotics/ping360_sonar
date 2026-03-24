@@ -17,6 +17,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(ping360_sonar_msgs REQUIRED)
 find_package(image_transport REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # build BlueRobotics' ping-cpp  standalone    
 add_subdirectory(src)
@@ -29,7 +30,7 @@ if(REAL_SONAR)
     target_compile_definitions(ping360_node PUBLIC REAL_SONAR)
 endif()
 target_include_directories(ping360_node PRIVATE include src/ping-cpp/src)
-target_link_libraries(ping360_node ping-cpp)
+target_link_libraries(ping360_node ping-cpp Eigen3::Eigen)
 ament_target_dependencies(ping360_node rclcpp sensor_msgs ping360_sonar_msgs image_transport)
   
 # Install

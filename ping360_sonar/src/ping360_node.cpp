@@ -241,15 +241,24 @@ void Ping360Sonar::refreshImage()
   if(length == 0) return;
   const auto half_size{image.step/2};
 
+  auto eigenDataVec = Eigen::Map<const Eigen::Vector<uint8_t, Eigen::Dynamic>>(data, length);
+
   // Pass a Laplacian of Gaussians along the ray
   std::vector<double> kernel = {-1.0, -3.0, 8.0, 8.0, -3.0, -1.0};
   std::vector<uint8_t> filtered = convolveLoG({data, length}, kernel);
-  std::cout << "Input data: \n" 
-            << static_cast<int>(data[0]) << " " << static_cast<int>(data[1]) << " " << static_cast<int>(data[2]) << "\n"
-            << "Filtered data: \n"
-            << static_cast<int>(filtered[0]) << " " << static_cast<int>(filtered[1]) << " " << static_cast<int>(filtered[2])
-            << std::endl;
-  const uint8_t placeholder = 100;
+  // std::cout << "Input data: \n" 
+  //           << static_cast<int>(data[0]) << " " << static_cast<int>(data[1]) << " " << static_cast<int>(data[2]) << "\n"
+  //           << "Filtered data: \n"
+  //           << static_cast<int>(filtered[0]) << " " << static_cast<int>(filtered[1]) << " " << static_cast<int>(filtered[2])
+  //           << std::endl;
+
+  for (size_t i = 0; i < filtered.size(); ++i) {  
+    if (filtered[i] < 135 || i < 80) {
+      filtered[i] = 0;
+    }
+  }
+
+  std::cout << find_index(filtered) << std::endl;
 
   sector.init(sonar.currentAngle(), fabs(sonar.angleStep()));
   int x{}, y{}, index{};
@@ -257,10 +266,7 @@ void Ping360Sonar::refreshImage()
   while(sector.nextPoint(x, y, index))
   {
     if(index < length)
-      if (index >= 80 && filtered[index] >= 125)
-        {
-          image.data[half_size-y + image.step*(half_size-x)] = filtered[index];
-        }
+        image.data[half_size-y + image.step*(half_size-x)] = filtered[index];
   }
 }
 
@@ -304,27 +310,30 @@ void Ping360Sonar::publishDistance(bool end_turn)
     constexpr float min_range = 0.2f;
     const auto [data, length] = sonar.intensities(); {}
 
-    for(int index = 0; index < length; index++)
-    {
-      if(data[index] >= scan_threshold)
-      {
-        if(const auto range{sonar.rangeFrom(index)};
-           range >= min_range && range < scan.range_max)
-        {
-          distance_sum += range;
-          distance_count++;
-        }
+    // Pass a Laplacian of Gaussians along the ray
+    std::vector<double> kernel = {-1.0, -3.0, 8.0, 8.0, -3.0, -1.0};
+    std::vector<uint8_t> filtered = convolveLoG({data, length}, kernel);
+
+    // Threshold and min index 
+    for (size_t i = 0; i < filtered.size(); ++i) {  
+      if (filtered[i] < 135 || i < 80) {
+        filtered[i] = 0;
       }
     }
 
-    if(end_turn && distance_count > 0)
-    {
-      distance.data = distance_sum / static_cast<float>(distance_count);
-      distance_pub->publish(distance);
-      distance_sum = 0.f;
-      distance_count = 0;
-    }
+    dist_index_buffer.push_back(find_index(filtered));
+
+    std::cout << dist_index_buffer << std::endl;
   }
+
+    // if(end_turn && distance_count > 0)
+    // {
+    //   distance.data = distance_sum / static_cast<float>(distance_count);
+    //   distance_pub->publish(distance);
+    //   distance_sum = 0.f;
+    //   distance_count = 0;
+    // }
+  
 }
 
 // Convolve uint8 buffer with kernel
@@ -383,4 +392,15 @@ std::vector<uint8_t> Ping360Sonar::convolveLoG(const std::pair<const uint8_t*, u
     }
 
     return output;
+}
+
+int Ping360Sonar::find_index(const std::vector<uint8_t>& v) {
+    auto it = std::find_if(v.begin(), v.end(), [](uint8_t x) {
+        return x >= 135;
+    });
+
+    if (it != v.end()) {
+        return std::distance(v.begin(), it);
+    }
+    return -1; // not found
 }
