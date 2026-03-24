@@ -12,7 +12,8 @@ def generate_launch_description():
         parameters = [
             {"range_max": 5},
             {"angle_sector": 100},
-            {"publish_distance": True}
+            {"publish_distance": True},
+            {"publish_echo": True}
         ],
         output = "screen"
     )
