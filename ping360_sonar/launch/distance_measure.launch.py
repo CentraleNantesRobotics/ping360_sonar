@@ -11,7 +11,8 @@ def generate_launch_description():
         executable = "ping360_node",
         parameters = [
             {"range_max": 5},
-            {"angle_sector": 100}
+            {"angle_sector": 100},
+            {"publish_distance": True}
         ],
         output = "screen"
     )
