@@ -10,7 +10,7 @@ def generate_launch_description():
         package = "ping360_sonar",
         executable = "ping360_node",
         parameters = [
-            {"range_max": 1},
+            {"range_max": 5},
             {"angle_sector": 100}
         ],
         output = "screen"

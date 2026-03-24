@@ -12,7 +12,7 @@
 #include <utility>
 #include <cstdint>
 #include <cmath>
-#include <Eigen/Dense>
+// #include <Eigen/Dense>
 
 #include <ping360_sonar/sector.h>
 #include <ping360_sonar/sonar_interface.h>

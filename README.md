@@ -179,11 +179,11 @@ The list below corresponds to the output of `ros2 param describe` for all `ping3
 
 Most the parameters can be updated during execution, except `baudrate`, `device`, `frame`, `image_rate` and `fallback_emulated`.
 
+## Terminology
 
-## Bugs & Feature Requests
-
-Please report bugs and request features using the [Issue Tracker](https://github.com/CentraleNantesRobotics/ping360_sonar/issues).
-
+- _samples_ refer to the discrete measurements along a beam
+- _range_ is the distance from the sonar (e.g. in the LaserScan message)
+- _max range_ is the maximum distance considered for the output messages.
 
 [ROS]: http://www.ros.org
 [BlueRobotics]: http://bluerobotics.com
@@ -191,29 +191,3 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [Image transport]: http://wiki.ros.org/image_transport
 [msg/SonarEcho]: /msg/SonarEcho.msg
 [sensor_msgs/LaserScan]: https://github.com/ros2/common_interfaces/blob/master/sensor_msgs/msg/LaserScan.msg
-
-## Contributors
-
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-<table>
-  <tr>
-	  <td align="center"><a href="https://github.com/oKermorgant"><img src="https://avatars.githubusercontent.com/u/1633173?v=4" width="100px;" alt=""/><br /><sub><b>Olivier Kermorgant</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=oKermorgant" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=oKermorgant" title="Tests">⚠️</a></td>
-    <td align="center"><a href="https://github.com/Hameck"><img src="https://avatars2.githubusercontent.com/u/14954732?v=4" width="100px;" alt=""/><br /><sub><b>Henrique Martinez Rocamora</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Hameck" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Hameck" title="Tests">⚠️</a></td>
-    <td align="center"><a href="https://stormix.co"><img src="https://avatars2.githubusercontent.com/u/18377687?v=4" width="100px;" alt=""/><br /><sub><b>Anas Mazouni</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Stormiix" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Stormiix" title="Tests">⚠️</a></td>
-    <td align="center"><a href="https://github.com/tomlogan501"><img src="https://avatars3.githubusercontent.com/u/56969577?v=4" width="100px;" alt=""/><br /><sub><b>tomlogan501</b></sub></a><br /><a href="#ideas-tomlogan501" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=tomlogan501" title="Tests">⚠️</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/issues?q=author%3Atomlogan501" title="Bug reports">🐛</a></td>
-	  <td align="center"><a href="https://github.com/AlexisFetet/"><img src="https://avatars.githubusercontent.com/u/94527511?v=4" width="100px;" alt=""/><br /><sub><b>Alexis Fetet</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=AlexisFetet" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=AlexisFetet" title="Tests">⚠️</a></td>
-	  <td align="center"><a href="https://github.com/Foukoo"><img src="https://avatars.githubusercontent.com/u/59455485?v=4" width="100px;" alt=""/><br /><sub><b>Jonathan Delacoux</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Foukoo" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Foukoo" title="Tests">⚠️</a></td>
-	  <td align="center"><a href="https://github.com/Rezenders"><img src="https://avatars.githubusercontent.com/u/20564040?v=4" width="100px;" alt=""/><br /><sub><b>Gustavo Rezende</b></sub></a><br /><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Rezenders" title="Code">💻</a> <a href="https://github.com/CentraleNantesRobotics/ping360_sonar/commits?author=Rezenders" title="Tests">⚠️</a><a href="https://github.com/CentraleNantesRobotics/ping360_sonar/issues?q=is%3Aissue+author%3Arezenders+" title="Bug reports">🐛</a></td>
-  </tr>
-</table>
-
-<!-- markdownlint-enable -->
-<!-- prettier-ignore-end -->
-<!-- ALL-CONTRIBUTORS-LIST:END -->
-
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. 
-
-Contributions of any kind welcome! Please refer to our [Contribution Guide](CONTRIBUTING.md)
-

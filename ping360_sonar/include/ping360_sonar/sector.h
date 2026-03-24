@@ -52,6 +52,8 @@ public:
     this->radius_sq = half_size*half_size-1;
   }
   void init(float angle, float angle_step);
+
+  // Iterates over all pixels in the angular sector (made of several bounds, ie. slices)
   bool nextPoint(int &x, int &y, int &index);
 };
 
