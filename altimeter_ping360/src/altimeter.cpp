@@ -80,6 +80,8 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     const int64_t size{this->get_parameter("debug_img_size").as_int()};
     mImage.data.resize(size*size);
     mImage.height = mImage.width = mImage.step = size;
+
+    mPubAlt = create_publisher<std_msgs::msg::Float32>("altimeter", qos);
 }
 
 void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) {
@@ -136,7 +138,10 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
     else if (end_turn) {
         // The previous message was the last one of the swipe and we can compute the altitude with our
         // current buffer
-        double altitude = computeSwipeAltitude();
+        std_msgs::msg::Float32 altitude;
+        altitude.data = computeSwipeAltitude();
+        std::cout << "Altitude " << altitude.data << " m" << std::endl;
+        mPubAlt->publish(altitude);
     }
     
     // Add the current message to the buffer for the next swipe
@@ -171,6 +176,8 @@ double Altimeter::computeSwipeAltitude() {
 
     const Eigen::Index num_cols = static_cast<Eigen::Index>(mvBufEchoMsgs.size());
     const Eigen::Index num_rows = static_cast<Eigen::Index>(mvBufEchoMsgs[0]->intensities.size());
+    // Spacing between samples: max_range / num_samples
+    const double dx = static_cast<double>(mvBufEchoMsgs[0]->range) / num_rows;
 
     // ----- Construct Eigen matrix ----- //
 
@@ -203,8 +210,6 @@ double Altimeter::computeSwipeAltitude() {
         
         // Create an Eigen vector with a Gaussian pdf to attenuate the reflective orb around the sonar
         mvAttenuationFac.resize(num_rows);
-        // Spacing between samples: max_range / num_samples
-        const double dx = static_cast<double>(mvBufEchoMsgs[0]->range) / num_rows;
         // The x value that the pdf is sampled at
         Eigen::VectorXd x = Eigen::VectorXd::LinSpaced(
             num_rows, 
@@ -236,18 +241,26 @@ double Altimeter::computeSwipeAltitude() {
         mmIntensities.col(c) = tmp;  // write new column back into matrix
     }
     // Technical threshold: negative values always cut
-    mmIntensities = mmIntensities.array().max(0.0) - 0.0;
+    mmIntensities = mmIntensities.array().max(0.0);
 
     normaliseTo255(mmIntensities);
-
-    // std::cout << "Before:\n" << mmIntensities.block<20, 6>(400, 0) << std::endl;
 
     // Semantic threshold: these values are cut on the remaining 0...255 scale
     mmIntensities = mmIntensities.array().max(mdBinarisationThreshold) - mdBinarisationThreshold;
 
-    // std::cout << "After:\n" << mmIntensities.block<20, 6>(400, 0) << std::endl;
-
     pubImg();
+
+    // Voting for the distance
+    // Boolean mask -> cast to int -> sum across columns
+    Eigen::VectorXi counts =
+        (mmIntensities.array() != 0.0)
+            .cast<int>()
+            .rowwise()
+            .sum();
+
+    const int winning_index = findPercentileRow(counts, this->get_parameter("min_percentile").as_double());
+
+    std::cout << "Winning index " << winning_index << std::endl;
 
     // Clear all messages except the most recent one. The last message of the previous swipe is the first
     // message of the next swipe
@@ -255,7 +268,7 @@ double Altimeter::computeSwipeAltitude() {
     mvBufEchoMsgs.clear();
     mvBufEchoMsgs.push_back(last_msg);
 
-    return 1.0;
+    return (winning_index + 1) * dx;
 }
 
 
@@ -324,9 +337,35 @@ void Altimeter::pubImg() {
         }
     }
 
+    // // --- Draw distance scale arcs ---
+    // const double range = static_cast<double>(mvBufEchoMsgs[0]->range);
+    // const double meters_per_pixel = range / num_samples; // adjust if max_radius corresponds to range
+    // const double distance_step_m = 1.0;                        // 1 meter steps
+    // int num_arcs = static_cast<int>(range / distance_step_m / meters_per_pixel);
+
+    // for (int n = 1; n <= num_arcs; ++n)
+    // {
+    //     double r_meters = n * distance_step_m;
+    //     double r_pixels = r_meters / meters_per_pixel;
+
+    //     // Draw circle / arc using polar coordinates
+    //     for (double theta = angle_min; theta <= angle_max; theta += 0.001) // fine step
+    //     {
+    //         int px = static_cast<int>(center_x + r_pixels * std::sin(theta));
+    //         int py = static_cast<int>(center_y - r_pixels * std::cos(theta)); // y inverted
+
+    //         if (px >= 0 && px < miImageSize && py >= 0 && py < miImageSize)
+    //         {
+    //             // Optional: avoid overwriting strong intensity
+    //             mImage.data[py * mImage.step + px] = 255;
+    //         }
+    //     }
+    // }
+
     mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);
     mImagePub.publish(mImage);
 }
+
 
 
 void Altimeter::correlate1DinPlace(Eigen::VectorXd& out,
@@ -396,6 +435,34 @@ Eigen::VectorXd Altimeter::sampleLoG(double sigma,
     }
 
     return result;
+}
+
+
+int Altimeter::findPercentileRow(const Eigen::VectorXi& counts, double percentile)
+{
+    if (counts.size() == 0 || percentile <= 0.0)
+        return 0;
+
+    if (percentile >= 1.0)
+        return counts.size() - 1;
+
+    int total = counts.sum();
+    if (total == 0)
+        return -1;  // no data
+
+    double threshold = percentile * static_cast<double>(total);
+
+    int cumulative = 0;
+
+    for (Eigen::Index i = 0; i < counts.size(); ++i)
+    {
+        cumulative += counts[i];
+
+        if (static_cast<double>(cumulative) >= threshold)
+            return static_cast<int>(i);
+    }
+
+    return counts.size() - 1;  // fallback
 }
 
 

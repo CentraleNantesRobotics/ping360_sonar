@@ -3,6 +3,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <iostream>
 #include <ping360_sonar_msgs/msg/sonar_echo.hpp>
+#include "std_msgs/msg/float32.hpp"
 #include <image_transport/image_transport.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <Eigen/Dense>
@@ -35,6 +36,8 @@ class Altimeter : public rclcpp::Node {
         static void correlate1DinPlace(Eigen::VectorXd& out, const Eigen::VectorXd& x, const Eigen::VectorXd& k);
         // In-place normalisation of a matrix. Needed for visualising the results after filtering before converting to uint8_t
         static void normaliseTo255(Eigen::MatrixXd& mat);
+        // Finding the nth percentile of a historgram of indices
+        static int findPercentileRow(const Eigen::VectorXi& counts, double percentile);
 
         // Utility method for setting parameter with min and max values. Float version
         void declareParamDescription(std::string name,
@@ -70,6 +73,7 @@ class Altimeter : public rclcpp::Node {
         std::string msEchoTopic;
         // Subscriber to the echo topic
         rclcpp::Subscription<ping360_sonar_msgs::msg::SonarEcho>::SharedPtr mSubEcho;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr mPubAlt;
         // The standard deviation of the Gaussian used for attenuating the signal at low distances
         double mfFilterCenterStd;
         // For the image publisher

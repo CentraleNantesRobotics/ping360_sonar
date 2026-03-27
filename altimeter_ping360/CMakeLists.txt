@@ -13,6 +13,7 @@ find_package(Eigen3 REQUIRED)
 find_package(ping360_sonar_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(sensors_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Executable
 add_executable(altimeter_ping360
@@ -30,7 +31,7 @@ target_include_directories(altimeter_ping360 PUBLIC
 target_link_libraries(altimeter_ping360 Eigen3::Eigen)
 
 # Link ROS 2 dependencies -- only links the ament libraries
-ament_target_dependencies(altimeter_ping360 ping360_sonar_msgs image_transport sensors_msgs rclcpp)
+ament_target_dependencies(altimeter_ping360 ping360_sonar_msgs image_transport sensors_msgs std_msgs rclcpp)
 
 # Install the executable
 install(TARGETS altimeter_ping360
