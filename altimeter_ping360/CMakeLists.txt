@@ -18,7 +18,6 @@ find_package(sensors_msgs REQUIRED)
 add_executable(altimeter_ping360
   src/altimeter_ping360.cpp
   src/altimeter.cpp
-  src/sector.cpp
 )
 
 # Include directory (so <altimeter_ping360/altimeter.hpp> works)

@@ -11,7 +11,7 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     // ----- Parameters ----- //
 
     // Declare the parameters
-    declareParamDescription("filter_center_std", 1.0f, 
+    declareParamDescription("filter_center_std", 0.5f, 
                             "Filter out the signal at low distances from the sonar using a Gaussian "
                             "with this standard deviation in m", 0.001f, 10.0f);
     declareParamDescription("LoG_std", 0.1f,
@@ -48,7 +48,9 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
 
     mfFilterCenterStd = this->get_parameter("filter_center_std").as_double();
 
-    mdAngleStep = grad2rad(this->get_parameter("angle_step").as_int());
+    miAngleStep = this->get_parameter("angle_step").as_int();
+
+    miImageSize = this->get_parameter("debug_img_size").as_int();
 
     // Find places to evaluate the Gaussian for dampening
     // -> The Gaussian damping is done by a Hadamard product of a Gauss-pdf vector of the same size as the echo vector
@@ -75,7 +77,6 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     mImage.set__is_bigendian(0);
     const int64_t size{this->get_parameter("debug_img_size").as_int()};
     mImage.data.resize(size*size);
-    std::fill(mImage.data.begin(), mImage.data.end(), 0);
     mImage.height = mImage.width = mImage.step = size;
 }
 
@@ -94,23 +95,23 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
     }
 
     if (mbPrevEchoMsg) {
-         // Now motion is clockwise
+         // Now motion is counterclockwise
         if (msg->angle - mfPrevAngle > 0) {
-            // Previously counterclockwise
-            if (!mbPrevMotionClockwise) {
-                end_turn = true;
-            }
-            // Set the direction indicator to what was just observed
-            mbPrevMotionClockwise = true;
-        }
-        // Now motion is counterclockwise (no motion considered counterclockwise)
-        else {
             // Previously clockwise
             if (mbPrevMotionClockwise) {
                 end_turn = true;
             }
             // Set the direction indicator to what was just observed
             mbPrevMotionClockwise = false;
+        }
+        // Now motion is clockwise (no motion (0 angle) is considered counterclockwise)
+        else {
+            // Previously counterclockwise
+            if (!mbPrevMotionClockwise) {
+                end_turn = true;
+            }
+            // Set the direction indicator to what was just observed
+            mbPrevMotionClockwise = true;
         }
     }
 
@@ -156,35 +157,44 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
 double Altimeter::computeSwipeAltitude() {
     std::cout << "Called Altimeter::computeSwipeAltitude() with buffer length " << mvBufEchoMsgs.size() << std::endl;
 
+    const Eigen::Index num_cols = static_cast<Eigen::Index>(mvBufEchoMsgs.size());
+    const Eigen::Index num_rows = static_cast<Eigen::Index>(mvBufEchoMsgs[0]->intensities.size());
+
     // ----- Construct Eigen matrix ----- //
 
     // Resize Eigen matrix if needed
-    if (mmIntensities.cols() != static_cast<Eigen::Index>(mvBufEchoMsgs.size()) ||
-        mmIntensities.rows() != static_cast<Eigen::Index>(mvBufEchoMsgs[0]->intensities.size())) {
-        mmIntensities.resize(
-            mvBufEchoMsgs[0]->intensities.size(),
-            mvBufEchoMsgs.size()
-        );
-    }
+    if (mmIntensities.cols() != num_cols || mmIntensities.rows() != num_rows)
+        mmIntensities.resize(num_rows, num_cols);
 
     // Fill in matrix. Copies to preserve orignal values for plotting the image
-    for (Eigen::Index j = 0; j < mmIntensities.cols(); ++j) {
-        for (Eigen::Index i = 0; i < mmIntensities.rows(); ++i) {
-            mmIntensities(i, j) = static_cast<double>(mvBufEchoMsgs[j]->intensities[i]);
+    // To make sure negative angles stay on the left and postive ones on the right, 
+    // the direction in which the matrix is filled alternates between swipes
+    if (mvBufEchoMsgs.back()->angle - mvBufEchoMsgs[0]->angle < 0) {
+        for (Eigen::Index j = 0; j < num_cols; ++j) {
+            for (Eigen::Index i = 0; i < num_rows; ++i) {
+                mmIntensities(i, j) = static_cast<double>(mvBufEchoMsgs[j]->intensities[i]);
+            }
         }
     }
-    
+    else {
+        for (Eigen::Index j = 0; j < num_cols; ++j) {
+            for (Eigen::Index i = 0; i < num_rows; ++i) {
+                // Only difference: what column we fill in
+                mmIntensities(i, num_cols - 1 - j) = static_cast<double>(mvBufEchoMsgs[j]->intensities[i]);
+            }
+        }
+    }
     // ---- New quantities for processing data if needed ----- //
 
-    if (mvAttenuationFac.size() != mmIntensities.rows()) {  // check if nr. samples changed
+    if (mvAttenuationFac.size() != num_rows) {  // check if nr. samples changed
         
         // Create an Eigen vector with a Gaussian pdf to attenuate the reflective orb around the sonar
-        mvAttenuationFac.resize(mmIntensities.rows());
+        mvAttenuationFac.resize(num_rows);
         // Spacing between samples: max_range / num_samples
-        double dx = static_cast<double>(mvBufEchoMsgs[0]->range) / mmIntensities.rows();
+        const double dx = static_cast<double>(mvBufEchoMsgs[0]->range) / num_rows;
         // The x value that the pdf is sampled at
         Eigen::VectorXd x = Eigen::VectorXd::LinSpaced(
-            mmIntensities.rows(), 
+            num_rows, 
             dx, 
             static_cast<double>(mvBufEchoMsgs[0]->range)
         );
@@ -196,16 +206,11 @@ double Altimeter::computeSwipeAltitude() {
         // New LoG kernel since the scale dx may have changed.
         // Multiply by -1 since the bottom (positive detection) shows as neg, pos, neg on the sonar
         mvLoGKernel = -1 * sampleLoG(
-            this->get_parameter("LoG_std").as_double(),                             // sigma
-            static_cast<double>(mvBufEchoMsgs[0]->range) / mmIntensities.rows(),    // dx
-            0.1                                                                     // threshold where kernel stops
+            this->get_parameter("LoG_std").as_double(),       // sigma
+            dx,
+            0.1                                               // threshold where kernel stops
         );
 
-        // Sector object for visualisation
-        mSector.configure(
-            mmIntensities.rows(), 
-            this->get_parameter("debug_img_size").as_int() / 2
-        );
     }
 
     pubImg();
@@ -214,11 +219,11 @@ double Altimeter::computeSwipeAltitude() {
     mmIntensities.array().colwise() *= mvAttenuationFac.array();
 
     // Apply filter on each column of the matrix
-    Eigen::VectorXd tmp(mmIntensities.rows());  // temporary vector for 1D convolution
-    for (Eigen::Index c = 0; c < mmIntensities.cols(); ++c) {
-        correlate1DinPlace(tmp, mmIntensities.col(c), mvLoGKernel);
-        mmIntensities.col(c) = tmp;  // write new column back into matrix
-    }
+    // Eigen::VectorXd tmp(mmIntensities.rows());  // temporary vector for 1D convolution
+    // for (Eigen::Index c = 0; c < mmIntensities.cols(); ++c) {
+    //     correlate1DinPlace(tmp, mmIntensities.col(c), mvLoGKernel);
+    //     mmIntensities.col(c) = tmp;  // write new column back into matrix
+    // }
 
     // Clear all messages except the most recent one. The last message of the previous swipe is the first
     // message of the next swipe
@@ -232,28 +237,68 @@ double Altimeter::computeSwipeAltitude() {
 
 void Altimeter::pubImg() {
 
-    // Normalise range in mmIntensities for later conversion to uint8_t
-    normaliseTo255(mmIntensities);
+    // Wipe previous image
+    std::fill(mImage.data.begin(), mImage.data.end(), 0);
 
-    int x{}, y{}, index{};
-    const auto half_size{mImage.step/2};
+    const int num_samples = mmIntensities.rows();
+    const int num_beams   = mmIntensities.cols();
+    const int center_x = miImageSize / 2;
+    const int center_y = miImageSize;   // bottom-center → fan goes upward
+    const double max_radius = static_cast<double>(miImageSize);
 
-    // Construct the image one beam at a time
-    for (size_t i = 0; i < mvBufEchoMsgs.size(); ++i) {
-        // Use the angles from the buffer but the values from the matrix
-        // std::cout << "Angle step: " << 
-        mSector.init(
-            mvBufEchoMsgs[i]->angle, 
-            fabs(mdAngleStep)
-        );
-        x = y = index = 0;
-        while(mSector.nextPoint(x, y, index)){
-            if(index < mmIntensities.rows())
-                mImage.data[half_size-y + mImage.step*(half_size-x)] = static_cast<uint8_t>(mmIntensities(index, i));
+    // Compute the width of the beams by looking at the difference in
+    // angle for the first and last SonarEcho message in the buffer
+    const double swipe_angle_diff = fabs(mvBufEchoMsgs[0]->angle - mvBufEchoMsgs.back()->angle);
+    const double beam_width_rad = swipe_angle_diff / (num_beams - 1);
+
+    // Init image
+    mImage.height = miImageSize;
+    mImage.width  = miImageSize;
+    mImage.encoding = "mono8";
+    mImage.step = miImageSize;
+    mImage.data.assign(miImageSize * miImageSize, 0);
+
+    const double total_angle = num_beams * beam_width_rad;
+    const double angle_min = -total_angle / 2.0;
+    const double angle_max =  total_angle / 2.0;
+
+    // Loop over all pixels (inverse mapping)
+    for (int py = 0; py < miImageSize; ++py)
+    {
+        for (int px = 0; px < miImageSize; ++px)
+        {
+            // Cartesian relative to sonar origin
+            double x = px - center_x;
+            double y = center_y - py;  // flip axis
+
+            double r = std::sqrt(x*x + y*y);
+
+            // Reject outside radius
+            if (r <= 0.0 || r >= max_radius)
+                continue;
+
+            double theta = std::atan2(x, y);  // note: swapped for vertical fan
+
+            // Reject outside fan angle
+            if (theta < angle_min || theta > angle_max)
+                continue;
+
+            // Map to indices
+            int j = static_cast<int>((theta - angle_min) / beam_width_rad);
+            int i = static_cast<int>((r / max_radius) * num_samples);
+
+            // Bounds safety
+            if (i < 0 || i >= num_samples || j < 0 || j >= num_beams)
+                continue;
+
+            uint8_t value = static_cast<uint8_t>(mmIntensities(i, j));
+
+            mImage.data[py * mImage.step + px] = value;
         }
     }
 
     mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);
+    std::cout << "Publised an image!" << std::endl;
     mImagePub.publish(mImage);
 }
 

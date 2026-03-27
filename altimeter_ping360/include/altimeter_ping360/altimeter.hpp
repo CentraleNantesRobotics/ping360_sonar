@@ -5,7 +5,6 @@
 #include <ping360_sonar_msgs/msg/sonar_echo.hpp>
 #include <image_transport/image_transport.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <altimeter_ping360/sector.hpp>
 #include <Eigen/Dense>
 #include <cmath>
 
@@ -76,6 +75,7 @@ class Altimeter : public rclcpp::Node {
         // For the image publisher
         image_transport::Publisher mImagePub;
         sensor_msgs::msg::Image mImage;
+        int miImageSize;
 
         // Buffer of SonarEcho messages. Emptied at the end of each swipe
         std::vector<ping360_sonar_msgs::msg::SonarEcho::SharedPtr> mvBufEchoMsgs;
@@ -102,9 +102,8 @@ class Altimeter : public rclcpp::Node {
         // Laplacian of Gaussian kernel for convolution
         Eigen::VectorXd mvLoGKernel;
 
-        // Sector object for turning sonar data into a debugging image
-        Sector mSector;
-        double mdAngleStep;
+        // Angular resolution of each beam in degrees
+        int miAngleStep;
 };
 
 }  // end namespace
