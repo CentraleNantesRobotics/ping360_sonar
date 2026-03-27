@@ -88,8 +88,9 @@ class Altimeter : public rclcpp::Node {
         
         // Angle communicated in the most recent SonarEcho message
         float mfPrevAngle{};
-        // Always true after the first SonarEcho message came in
-        bool mbPrevEchoMsg{};
+        // Integer used as a flag. After 2 iteraitons of echoCallback, its value is 2 and
+        // from this point on messages are compared with past messages
+        int miPrevEchoMsg{};
         // If the transducer was previously moving clockwise. Needed to tell if the
         // Ping360 hit the end of its angle_sector and the transducer reversed direction.
         // If false, the previous motion was counter-clockwise.

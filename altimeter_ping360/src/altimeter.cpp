@@ -88,13 +88,13 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
     // Default: false.
     bool end_turn{};
 
-    if ((mbPrevEchoMsg && miSamplesPrevBeam != msg->intensities.size()) || msg->intensities.size() == 0) {
+    if ((miPrevEchoMsg >= 2 && miSamplesPrevBeam != msg->intensities.size()) || msg->intensities.size() == 0) {
             RCLCPP_ERROR(this->get_logger(), "Samples in beam changed during swipe or there are none. "
                          "Wiping buffer at the end of the swipe.");
             mbMustClearBuf = true;
     }
 
-    if (mbPrevEchoMsg) {
+    if (miPrevEchoMsg >= 2) {
          // Now motion is counterclockwise
         if (msg->angle - mfPrevAngle > 0) {
             // Previously clockwise
@@ -146,9 +146,19 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
     mfPrevAngle = msg->angle;
     miSamplesPrevBeam = msg->intensities.size();
 
-    // After the first call to this method we can compare with the previous message
-    if (!mbPrevEchoMsg) {
-        mbPrevEchoMsg = true;
+    // After the first two calls to this method we can compare with the previous message
+    if (miPrevEchoMsg < 2) {
+        ++miPrevEchoMsg;
+
+        // if this is the last turn of initialisaiton, we can already determine the direction of rotation
+        if (miPrevEchoMsg == 2) {
+            if (msg->angle - mfPrevAngle > 0) {
+                mbPrevMotionClockwise = false;
+            }
+            else {
+                mbPrevMotionClockwise = true;
+            }
+        }
     }
     
 };
