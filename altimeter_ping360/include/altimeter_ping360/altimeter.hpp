@@ -76,6 +76,8 @@ class Altimeter : public rclcpp::Node {
         image_transport::Publisher mImagePub;
         sensor_msgs::msg::Image mImage;
         int miImageSize;
+        // Binarisation parameter
+        double mdBinarisationThreshold;
 
         // Buffer of SonarEcho messages. Emptied at the end of each swipe
         std::vector<ping360_sonar_msgs::msg::SonarEcho::SharedPtr> mvBufEchoMsgs;

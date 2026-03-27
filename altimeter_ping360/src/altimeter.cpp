@@ -11,15 +11,15 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     // ----- Parameters ----- //
 
     // Declare the parameters
-    declareParamDescription("filter_center_std", 0.5f, 
+    declareParamDescription("filter_center_std", 0.8f, 
                             "Filter out the signal at low distances from the sonar using a Gaussian "
                             "with this standard deviation in m", 0.001f, 10.0f);
-    declareParamDescription("LoG_std", 0.1f,
+    declareParamDescription("LoG_std", 0.2f,
                             "Standard deviation of the Laplacian of Gaussian applied to the signal",
                             0.001f, 10.0f);
-    declareParamDescription("binarisation_threshold", 0.7f,
+    declareParamDescription("binarisation_threshold", 60.0f,
                             "Threshold for when to consider a signal as coming from the bottom",
-                            0.001f, 1.0f);
+                            0.0f, 255.0f);
     declareParamDescription("min_percentile", 0.2f,
                             "Min. detected distances from different beams are accumulated "
                             "by looking at their distribution and selecting the given percentile. "
@@ -51,6 +51,8 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     miAngleStep = this->get_parameter("angle_step").as_int();
 
     miImageSize = this->get_parameter("debug_img_size").as_int();
+
+    mdBinarisationThreshold = this->get_parameter("binarisation_threshold").as_double();
 
     // Find places to evaluate the Gaussian for dampening
     // -> The Gaussian damping is done by a Hadamard product of a Gauss-pdf vector of the same size as the echo vector
@@ -122,7 +124,7 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
     if (end_turn && mbMustClearBuf){ 
         // we reached the end of the swipe but the dimensionalities changed. We reset the buffer
         // but do not call computeSwipeAltitude()
-        auto last_msg = mvBufEchoMsgs.back();
+        const auto last_msg = mvBufEchoMsgs.back();
         mvBufEchoMsgs.clear();
         mvBufEchoMsgs.push_back(last_msg);      // push message from last iteration
 
@@ -194,6 +196,7 @@ double Altimeter::computeSwipeAltitude() {
             }
         }
     }
+
     // ---- New quantities for processing data if needed ----- //
 
     if (mvAttenuationFac.size() != num_rows) {  // check if nr. samples changed
@@ -223,21 +226,32 @@ double Altimeter::computeSwipeAltitude() {
 
     }
 
-    pubImg();
-
     // Apply attenuation factors
     mmIntensities.array().colwise() *= mvAttenuationFac.array();
 
     // Apply filter on each column of the matrix
-    // Eigen::VectorXd tmp(mmIntensities.rows());  // temporary vector for 1D convolution
-    // for (Eigen::Index c = 0; c < mmIntensities.cols(); ++c) {
-    //     correlate1DinPlace(tmp, mmIntensities.col(c), mvLoGKernel);
-    //     mmIntensities.col(c) = tmp;  // write new column back into matrix
-    // }
+    Eigen::VectorXd tmp(num_rows);  // temporary vector for 1D convolution
+    for (Eigen::Index c = 0; c < num_cols; ++c) {
+        correlate1DinPlace(tmp, mmIntensities.col(c), mvLoGKernel);
+        mmIntensities.col(c) = tmp;  // write new column back into matrix
+    }
+    // Technical threshold: negative values always cut
+    mmIntensities = mmIntensities.array().max(0.0) - 0.0;
+
+    normaliseTo255(mmIntensities);
+
+    // std::cout << "Before:\n" << mmIntensities.block<20, 6>(400, 0) << std::endl;
+
+    // Semantic threshold: these values are cut on the remaining 0...255 scale
+    mmIntensities = mmIntensities.array().max(mdBinarisationThreshold) - mdBinarisationThreshold;
+
+    // std::cout << "After:\n" << mmIntensities.block<20, 6>(400, 0) << std::endl;
+
+    pubImg();
 
     // Clear all messages except the most recent one. The last message of the previous swipe is the first
     // message of the next swipe
-    auto last_msg = mvBufEchoMsgs.back();
+    const auto last_msg = mvBufEchoMsgs.back();
     mvBufEchoMsgs.clear();
     mvBufEchoMsgs.push_back(last_msg);
 
@@ -246,6 +260,9 @@ double Altimeter::computeSwipeAltitude() {
 
 
 void Altimeter::pubImg() {
+
+    // Normalise the current matrix
+    normaliseTo255(mmIntensities);
 
     // Wipe previous image
     std::fill(mImage.data.begin(), mImage.data.end(), 0);
@@ -308,7 +325,6 @@ void Altimeter::pubImg() {
     }
 
     mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);
-    std::cout << "Publised an image!" << std::endl;
     mImagePub.publish(mImage);
 }
 
