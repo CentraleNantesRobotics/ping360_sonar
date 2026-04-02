@@ -8,10 +8,11 @@ def generate_launch_description():
         executable='altimeter_ping360',
         name='altimeter_ping360_node',   # must match the logger name
         output='screen',
-        # prefix="xterm -fa 'Monospace' -fs 10 -e gdb start --args",
+        # prefix="xterm -fa 'Monospace' -fs 10 -e gdb start --args",  # uncomment to start debugger
         arguments=[
             "--ros-args",
-            "--log-level", "altimeter_ping360_node:=debug"  # per-node level
+            "--log-level", 
+            "altimeter_ping360_node:=info"  # per-node level
         ]
     )
 

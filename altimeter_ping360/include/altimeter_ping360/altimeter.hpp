@@ -24,7 +24,7 @@ class Altimeter : public rclcpp::Node {
         void echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg);
         // Computes the altitude of the UUV across one swipe
         double computeSwipeAltitude();
-        // Publishes an debug image based on what is in the buffer and the mmIntensities matrix
+        // Fillst the member mImage based on what is in the buffer and the mmIntensities matrix
         // Should only be called when the buffer is filled and corresponds to the values in mmIntensities
         void pubImg();
 
@@ -76,8 +76,9 @@ class Altimeter : public rclcpp::Node {
         rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr mPubAlt;
         // The standard deviation of the Gaussian used for attenuating the signal at low distances
         double mfFilterCenterStd;
-        // For the image publisher
-        image_transport::Publisher mImagePub;
+        // For the image publishers
+        image_transport::Publisher mFilteredImagePub;
+        image_transport::Publisher mRawImagePub;
         sensor_msgs::msg::Image mImage;
         int miImageSize;
         // Binarisation parameter
@@ -111,6 +112,10 @@ class Altimeter : public rclcpp::Node {
 
         // Angular resolution of each beam in degrees
         int miAngleStep;
+        // If the unfiltered sonar image should be published
+        bool mbPubRawImg{};
+        // If the filtered sonar image should be published
+        bool mbPubAltImg{};
 };
 
 }  // end namespace

@@ -11,29 +11,28 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     // ----- Parameters ----- //
 
     // Declare the parameters
-    declareParamDescription("filter_center_std", 0.8f, 
+    declareParamDescription("filter_center_std", 1.2f, 
                             "Filter out the signal at low distances from the sonar using a Gaussian "
                             "with this standard deviation in m", 0.001f, 10.0f);
-    declareParamDescription("LoG_std", 0.2f,
+    declareParamDescription("LoG_std", 0.28f,
                             "Standard deviation of the Laplacian of Gaussian applied to the signal",
                             0.001f, 10.0f);
     declareParamDescription("binarisation_threshold", 60.0f,
                             "Threshold for when to consider a signal as coming from the bottom",
                             0.0f, 255.0f);
-    declareParamDescription("min_percentile", 0.2f,
+    declareParamDescription("min_percentile", 0.75f,
                             "Min. detected distances from different beams are accumulated "
                             "by looking at their distribution and selecting the given percentile. "
                             "This gives more resiliance to outliers.",
                             0.001f, 1.0f);
-    declareParamDescription("angle_sector", 60,
+    declareParamDescription("angle_sector", 20,
                             "See 'angle_sector' parameter of the ping360_sonar node",
-                            60, 360);
-    declareParamDescription("thresholded_sonar_image", true,
-                            "Displays the sonar image as in the ping360_sonar node, but highlighting "
-                            "those pixels that are above the threshold. Mainly for debugging and "
-                            "parameter tuning.");
-    // declareParamDescription("debug_img", true,
-    //                         "If there should be a debugging image");
+                            0, 360);
+    declareParamDescription("pub_raw_img", false,
+                            "Publishes the unfiltered sonar image. However, the short distance echos have "
+                            "been filtered out already as the image is very hard to read otherwise.");
+    declareParamDescription("pub_altimeter_img", false,
+                            "Publishes the filtered sonar image");
     declareParamDescription("debug_img_size", 300,
                             "Size of the debugging image", 100, 500);
     declareParamDescription("angle_step", 4,
@@ -54,14 +53,8 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
 
     mdBinarisationThreshold = this->get_parameter("binarisation_threshold").as_double();
 
-    // Find places to evaluate the Gaussian for dampening
-    // -> The Gaussian damping is done by a Hadamard product of a Gauss-pdf vector of the same size as the echo vector
-    
-    // Convert Ga
-
-    // Find places to evaluate the LoG filter 
-    // -> LoG filter has a different dimensionality depending on parameters
-    // -> Have dimensionality adapt to the std. At some point towards the margins the value is basically zero
+    mbPubRawImg = this->get_parameter("pub_raw_img").as_bool();
+    mbPubAltImg = this->get_parameter("pub_altimeter_img").as_bool();
 
     // QoS object 
     rclcpp::QoS qos = rclcpp::SensorDataQoS();
@@ -74,7 +67,7 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
         }
     );
 
-    mImagePub = image_transport::create_publisher(this, "altimeter_image");
+    mFilteredImagePub = image_transport::create_publisher(this, "altimeter_image");
     mImage.set__encoding("mono8");
     mImage.set__is_bigendian(0);
     const int64_t size{this->get_parameter("debug_img_size").as_int()};
@@ -82,6 +75,8 @@ Altimeter::Altimeter(const rclcpp::NodeOptions & options)
     mImage.height = mImage.width = mImage.step = size;
 
     mPubAlt = create_publisher<std_msgs::msg::Float32>("altimeter", qos);
+
+    mRawImagePub = image_transport::create_publisher(this, "raw_image");
 }
 
 void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) {
@@ -140,7 +135,7 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
         // current buffer
         std_msgs::msg::Float32 altitude;
         altitude.data = computeSwipeAltitude();
-        std::cout << "Altitude " << altitude.data << " m" << std::endl;
+        // std::cout << "Altitude " << altitude.data << " m" << std::endl;
         mPubAlt->publish(altitude);
     }
     
@@ -172,7 +167,7 @@ void Altimeter::echoCallback(ping360_sonar_msgs::msg::SonarEcho::SharedPtr msg) 
 
 
 double Altimeter::computeSwipeAltitude() {
-    std::cout << "Called Altimeter::computeSwipeAltitude() with buffer length " << mvBufEchoMsgs.size() << std::endl;
+    // std::cout << "Called Altimeter::computeSwipeAltitude() with buffer length " << mvBufEchoMsgs.size() << std::endl;
 
     const Eigen::Index num_cols = static_cast<Eigen::Index>(mvBufEchoMsgs.size());
     const Eigen::Index num_rows = static_cast<Eigen::Index>(mvBufEchoMsgs[0]->intensities.size());
@@ -203,12 +198,12 @@ double Altimeter::computeSwipeAltitude() {
             }
         }
     }
-
+    
     // ---- New quantities for processing data if needed ----- //
 
     if (mvAttenuationFac.size() != num_rows) {  // check if nr. samples changed
         
-        // Create an Eigen vector with a Gaussian pdf to attenuate the reflective orb around the sonar
+        // Create an Eigen vector with a Gaussian pdf to attenuate the mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);reflective orb around the sonar
         mvAttenuationFac.resize(num_rows);
         // The x value that the pdf is sampled at
         Eigen::VectorXd x = Eigen::VectorXd::LinSpaced(
@@ -234,6 +229,13 @@ double Altimeter::computeSwipeAltitude() {
     // Apply attenuation factors
     mmIntensities.array().colwise() *= mvAttenuationFac.array();
 
+    // Publish the raw image if desired
+    if (mbPubRawImg) {
+        pubImg();
+        mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);
+        mRawImagePub.publish(mImage);
+    }
+
     // Apply filter on each column of the matrix
     Eigen::VectorXd tmp(num_rows);  // temporary vector for 1D convolution
     for (Eigen::Index c = 0; c < num_cols; ++c) {
@@ -248,7 +250,11 @@ double Altimeter::computeSwipeAltitude() {
     // Semantic threshold: these values are cut on the remaining 0...255 scale
     mmIntensities = mmIntensities.array().max(mdBinarisationThreshold) - mdBinarisationThreshold;
 
-    pubImg();
+    if (mbPubAltImg) {
+        pubImg();
+        mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);
+        mFilteredImagePub.publish(mImage);
+    }
 
     // Voting for the distance
     // Boolean mask -> cast to int -> sum across columns
@@ -260,7 +266,7 @@ double Altimeter::computeSwipeAltitude() {
 
     const int winning_index = findPercentileRow(counts, this->get_parameter("min_percentile").as_double());
 
-    std::cout << "Winning index " << winning_index << std::endl;
+    // std::cout << "Winning index " << winning_index << std::endl;
 
     // Clear all messages except the most recent one. The last message of the previous swipe is the first
     // message of the next swipe
@@ -361,9 +367,6 @@ void Altimeter::pubImg() {
     //         }
     //     }
     // }
-
-    mImage.header.set__stamp(mvBufEchoMsgs.back()->header.stamp);
-    mImagePub.publish(mImage);
 }
 
 
