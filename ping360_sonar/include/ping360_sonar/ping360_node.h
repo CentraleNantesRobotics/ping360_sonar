@@ -66,9 +66,9 @@ private:
   Ping360Interface sonar{declare_parameter<std::string>("device", "/dev/ttyUSB0"),
         static_cast<int>(declare_parameter<int>("baudrate", 115200)),
         declareParamDescription("fallback_emulated", true, "Emulates a sonar if Ping360 cannot be initialized"),
-        declareParamDescription<std::string>("connection_type", "serial", "If connection is via serial or udp"),
-        declareParamDescription<std::string>("udp_address", "0.0.0.0", "Udp address"),
-        declareParamDescription<int>("udp_port", 12345, "Udp port")};
+        declareParamDescription<std::string>("connection_type", "udp", "If connection is via serial or udp"),
+        declareParamDescription<std::string>("udp_address", "192.168.2.2", "Udp address"),
+        declareParamDescription<int>("udp_port", 9092, "Udp port")};
   inline void initPublishers(bool image, bool scan, bool echo);
 
   // image params

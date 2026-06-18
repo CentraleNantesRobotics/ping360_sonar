@@ -56,9 +56,9 @@ class Ping360_node(Node):
         self.sonar = SonarInterface(self.declare_parameter('device', '/dev/ttyUSB0').value,
                                     self.declare_parameter("baudrate", 115200).value,
                                     self.declare_parameter('fallback_emulated', True).value,
-                                    self.declare_parameter('connection_type', 'serial').value,
-                                    self.declare_parameter('udp_address', '0.0.0.0').value,
-                                    self.declare_parameter('udp_port', 12345).value)
+                                    self.declare_parameter('connection_type', 'udp').value,
+                                    self.declare_parameter('udp_address', '192.168.2.2').value,
+                                    self.declare_parameter('udp_port', 9092).value)
                 
         self.image_pub = None
         self.scan_pub = None
