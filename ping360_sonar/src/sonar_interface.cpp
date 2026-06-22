@@ -1,7 +1,6 @@
 #include <ping360_sonar/sonar_interface.h>
 #include <thread>
 
-
 constexpr static int firmwareMaxSamples{1200};
 constexpr static int firmwareMinSamplePeriod{80};
 constexpr static float samplePeriodTickDuration{25e-9f};
@@ -169,7 +168,6 @@ std::pair<bool, bool> Ping360Interface::read()
 
   if(real_sonar)
   {
-    std::cout << device.transmit_duration << std::endl;
     sonar->set_transducer(device.mode,
                          device.gain_setting,
                          angle > 0 ? angle : angle+400,

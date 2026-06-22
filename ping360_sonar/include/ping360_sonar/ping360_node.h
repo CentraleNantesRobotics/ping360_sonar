@@ -30,7 +30,7 @@ public:
 
 private:
 
-  rclcpp::TimerBase::SharedPtr image_timer;
+  rclcpp::TimerBase::SharedPtr image_timer, refresh_timer;
   OnSetParametersCallbackHandle::SharedPtr param_change;
   SetParametersResult parametersCallback(const std::vector<rclcpp::Parameter> &parameters);
   IntParams updatedParams(const std::vector<rclcpp::Parameter> &new_params) const;
@@ -60,6 +60,19 @@ private:
                                 .set__to_value(upper)
                                 .set__step(step)};
     return declare_parameter<int>(name, default_value, descriptor);
+  }
+  inline int declareParamDescription(std::string name,
+                                     double default_value,
+                                     std::string description,
+                                     double lower,
+                                     double upper)
+  {
+    rcl_interfaces::msg::ParameterDescriptor descriptor;
+    descriptor.set__name(name).set__description(description);
+    descriptor.floating_point_range = {rcl_interfaces::msg::FloatingPointRange()
+                                    .set__from_value(lower)
+                                    .set__to_value(upper)};
+    return declare_parameter<double>(name, default_value, descriptor);
   }
 
   // sonar i/o

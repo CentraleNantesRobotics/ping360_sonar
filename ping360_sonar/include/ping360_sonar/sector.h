@@ -52,7 +52,7 @@ public:
     this->radius_sq = half_size*half_size-1;
   }
   void init(float angle, float angle_step);
-  bool nextPoint(int &x, int &y, int &index);
+  bool nextPoint(int &x, int &y, size_t& index);
 };
 
 }

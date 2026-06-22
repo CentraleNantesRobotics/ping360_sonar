@@ -50,7 +50,7 @@ public:
   {
     return sonar->device_data_data.number_of_samples;
   }
-  inline std::pair<const uint8_t*, uint16_t> intensities() const
+  inline std::pair<uint8_t*, uint16_t> intensities()
   {
     return {sonar->device_data_data.data, sonar->device_data_data.data_length};
   }

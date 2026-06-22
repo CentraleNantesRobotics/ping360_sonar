@@ -15,7 +15,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   // bounded parameters that are parsed later
   declareParamDescription("gain", 0, "Sonar gain (0 = low, 1 = normal, 2 = high)", 0, 2);
   declareParamDescription("frequency", 740, "Sonar operating frequency [kHz]", 650, 850);
-  declareParamDescription("range_max", 2, "Sonar max range [m]", 1, 50);
+  declareParamDescription("range_max", 2., "Sonar max range [m]", 0.5, 50.);
   declareParamDescription("angle_sector", 360, "Scanned angular sector around sonar heading [degrees]. Will oscillate if not 360", 60, 360);
   declareParamDescription("angle_step", 1, "Sonar angular resolution [degrees]", 1, 20);
   declareParamDescription("image_size", 300, "Output image size [pixels]", 100, 1000, 2);
@@ -44,6 +44,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   const auto image_rate_ms{get_parameter("image_rate").as_int()};
   image_timer = this->create_wall_timer(std::chrono::milliseconds(image_rate_ms),
                                         [this](){publishImage();});
+  refresh_timer = this->create_wall_timer(120ms, [this](){refresh();});
 
   param_change = add_on_set_parameters_callback(
                    std::bind(&Ping360Sonar::parametersCallback, this, std::placeholders::_1));
@@ -54,7 +55,8 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
   // "only" parameters to be monitored for change
   using ParamType = rclcpp::ParameterType;
   const std::map<ParamType,vector<string>> mutable_params{
-    {ParamType::PARAMETER_INTEGER,{"gain","frequency","range_max",
+    {ParamType::PARAMETER_DOUBLE, {"range_max"}},
+    {ParamType::PARAMETER_INTEGER,{"gain","frequency",
                                    "angle_sector","angle_step",
                                    "speed_of_sound","image_size", "scan_threshold", "sonar_timeout"}},
     {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
@@ -67,6 +69,11 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
     {
       for(auto &param: params)
         mapping[param.get_name()] = param.as_int();
+    }
+    else if(type == ParamType::PARAMETER_DOUBLE)
+    {
+      for(auto &param: params)
+        mapping[param.get_name()] = param.as_double();
     }
     else
     {
@@ -171,10 +178,10 @@ void Ping360Sonar::configureFromParams(const vector<rclcpp::Parameter> &new_para
 
 void Ping360Sonar::publishEcho(const rclcpp::Time &now)
 {
-  const auto [data, length] = sonar.intensities(); {}
-  echo.angle = sonar.currentAngle();
+  const auto &[data, length] = sonar.intensities();
   echo.intensities.resize(length);
   std::copy(data, data+length, echo.intensities.begin());
+  echo.angle = sonar.currentAngle();
   echo.header.set__stamp(now);
   echo_pub->publish(echo);
 }
@@ -190,8 +197,8 @@ void Ping360Sonar::publishScan(const rclcpp::Time &now, bool end_turn)
   auto &this_intensity = scan.intensities[angle] = 0;
 
   // find first (nearest) valid point in this direction
-  const auto [data, length] = sonar.intensities(); {}
-  for(int index=0; index<length; index++)
+  const auto &[data, length] = sonar.intensities();
+  for(size_t index=0; index< length; index++)
   {
     if(data[index] >= scan_threshold)
     {
@@ -231,12 +238,13 @@ void Ping360Sonar::publishScan(const rclcpp::Time &now, bool end_turn)
 
 void Ping360Sonar::refreshImage()
 {
-  const auto [data, length] = sonar.intensities(); {}
+  const auto &[data, length] = sonar.intensities();
   if(length == 0) return;
   const auto half_size{image.step/2};
 
   sector.init(sonar.currentAngle(), fabs(sonar.angleStep()));
-  int x{}, y{}, index{};
+  int x{}, y{};
+  size_t index{};
 
   while(sector.nextPoint(x, y, index))
   {

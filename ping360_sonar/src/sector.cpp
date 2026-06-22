@@ -60,7 +60,7 @@ std::tuple<int, int,bool> Sector::xLimits(float angle_min, float angle_max)
         same_side};
 }
 
-bool Sector::nextPoint(int &x, int &y, int &index)
+bool Sector::nextPoint(int &x, int &y, size_t &index)
 {
   if(cur == bounds.end())
   {

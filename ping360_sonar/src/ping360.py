@@ -7,7 +7,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor
-from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor, IntegerRange
+from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor, IntegerRange, FloatingPointRange
 from rclpy.parameter import Parameter
 
 from sensor_msgs.msg import Image
@@ -31,7 +31,7 @@ class Ping360_node(Node):
             'image_size': [500,200,1000],
             'image_rate': [100, 50, 2000],
             'speed_of_sound': [1500,1000,2000],
-            'range_max': [2,1,50],
+            'range_max': [2.,1.,50., None],
             'publish_image': True,
             'publish_scan': False,
             'publish_echo': False}
@@ -45,11 +45,18 @@ class Ping360_node(Node):
                     step = 1
                 else:
                     default, low,up,step = value
-                descriptor = ParameterDescriptor(
+                if isinstance(default, float):
+                    descriptor = ParameterDescriptor(
                     name=name,
-                    integer_range = [IntegerRange(from_value=low,
-                                                  to_value=up,
-                                                  step=step)])
+                    floating_point_range = [FloatingPointRange(from_value=low,
+                                                          to_value=up,
+                                                          step=step)])
+                else:
+                    descriptor = ParameterDescriptor(
+                        name=name,
+                        integer_range = [IntegerRange(from_value=low,
+                                                      to_value=up,
+                                                      step=step)])
                 self.declare_parameter(name,default,descriptor)
                 
         # init sonar interface
