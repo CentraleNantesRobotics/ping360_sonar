@@ -15,7 +15,7 @@ Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   // bounded parameters that are parsed later
   declareParamDescription("gain", 0, "Sonar gain (0 = low, 1 = normal, 2 = high)", 0, 2);
   declareParamDescription("frequency", 740, "Sonar operating frequency [kHz]", 650, 850);
-  declareParamDescription("range_max", 2., "Sonar max range [m]", 0.5, 50.);
+  declareParamDescription("range_max", 2, "Sonar max range [m]", 1, 50);
   declareParamDescription("angle_sector", 360, "Scanned angular sector around sonar heading [degrees]. Will oscillate if not 360", 60, 360);
   declareParamDescription("angle_step", 1, "Sonar angular resolution [degrees]", 1, 20);
   declareParamDescription("image_size", 300, "Output image size [pixels]", 100, 1000, 2);
@@ -55,8 +55,7 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
   // "only" parameters to be monitored for change
   using ParamType = rclcpp::ParameterType;
   const std::map<ParamType,vector<string>> mutable_params{
-    {ParamType::PARAMETER_DOUBLE, {"range_max"}},
-    {ParamType::PARAMETER_INTEGER,{"gain","frequency",
+    {ParamType::PARAMETER_INTEGER,{"gain","frequency","range_max",
                                    "angle_sector","angle_step",
                                    "speed_of_sound","image_size", "scan_threshold", "sonar_timeout"}},
     {ParamType::PARAMETER_BOOL, {"publish_image","publish_scan","publish_echo"}}};
@@ -68,7 +67,10 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
     if(type == ParamType::PARAMETER_INTEGER)
     {
       for(auto &param: params)
+      {
+        param.get_value<double>();
         mapping[param.get_name()] = param.as_int();
+      }
     }
     else if(type == ParamType::PARAMETER_DOUBLE)
     {

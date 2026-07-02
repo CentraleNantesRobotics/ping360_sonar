@@ -46,7 +46,7 @@ private:
     descriptor.set__name(name).set__description(description);
     return declare_parameter<ParamType>(name, default_value, descriptor);
   }
-  inline int declareParamDescription(std::string name,
+  inline auto declareParamDescription(std::string name,
                                      int default_value,
                                      std::string description,
                                      int lower,
@@ -61,7 +61,7 @@ private:
                                 .set__step(step)};
     return declare_parameter<int>(name, default_value, descriptor);
   }
-  inline int declareParamDescription(std::string name,
+  inline auto declareParamDescription(std::string name,
                                      double default_value,
                                      std::string description,
                                      double lower,
