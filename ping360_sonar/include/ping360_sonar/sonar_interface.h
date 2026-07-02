@@ -62,6 +62,8 @@ public:
     return sonar->device_data_data.transmit_duration/1e6;
   }
 
+  inline auto isRealSonar() const {return real_sonar;}
+
 private:
   std::unique_ptr<SerialLink> serial_link;
   std::unique_ptr<UdpLink> udp_link;

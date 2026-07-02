@@ -11,7 +11,12 @@ using std::vector;
 
 Ping360Sonar::Ping360Sonar(rclcpp::NodeOptions options)
   : Node("ping360", options)
-{ 
+{
+  if(sonar.isRealSonar())
+    RCLCPP_INFO(get_logger(), "Connected to sonar");
+  else
+    RCLCPP_WARN(get_logger(), "No sonar detected, using simulated sonar");
+
   // bounded parameters that are parsed later
   declareParamDescription("gain", 0, "Sonar gain (0 = low, 1 = normal, 2 = high)", 0, 2);
   declareParamDescription("frequency", 740, "Sonar operating frequency [kHz]", 650, 850);
