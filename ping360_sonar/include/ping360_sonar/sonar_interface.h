@@ -1,10 +1,12 @@
 #ifndef PING360_SONAR_INTERFACE
 #define PING360_SONAR_INTERFACE
 
-#include <device/ping-device-ping360.h>
-#include <message/ping-message-ping360.h>
 #include <hal/link/desktop/serial-link.h>
 #include <hal/link/desktop/udp-link.h>
+#include <device/ping-device-ping360.h>
+#include <message/ping-message-ping360.h>
+#include <string>
+#include <memory>
 
 namespace ping360_sonar
 {

@@ -13,19 +13,19 @@ using namespace ping360_sonar;
 
 Ping360Interface::Ping360Interface(std::string device, int baudrate, bool fallback, std::string connection_type, std::string udp_address, int udp_port)
 {
-  if(connection_type.compare("serial") == 0)
+  if(connection_type == "serial")
   {
     serial_link = std::make_unique<SerialLink>(device, baudrate);
-    sonar = std::make_unique<Ping360>(*serial_link.get());
+    sonar = std::make_unique<Ping360>(*serial_link);
   }
-  else if(connection_type.compare("udp") ==0)
+  else if(connection_type == "udp")
   {
     udp_link = std::make_unique<UdpLink>(udp_address, std::to_string(udp_port));
-    sonar = std::make_unique<Ping360>(*udp_link.get());
+    sonar = std::make_unique<Ping360>(*udp_link);
   }
 
   // try to init the real sonar anyway
-  if(sonar->initialize())
+  if(sonar && sonar->initialize())
   {
     real_sonar = true;
     return;

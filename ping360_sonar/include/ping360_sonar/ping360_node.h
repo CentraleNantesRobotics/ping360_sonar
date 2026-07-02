@@ -80,8 +80,8 @@ private:
         static_cast<int>(declare_parameter<int>("baudrate", 115200)),
         declareParamDescription("fallback_emulated", true, "Emulates a sonar if Ping360 cannot be initialized"),
         declareParamDescription<std::string>("connection_type", "udp", "If connection is via serial or udp"),
-        declareParamDescription<std::string>("udp_address", "192.168.2.2", "Udp address"),
-        declareParamDescription<int>("udp_port", 9092, "Udp port")};
+        declareParamDescription<std::string>("udp_address", "192.168.2.2", "UDP address"),
+        declareParamDescription<int>("udp_port", 9092, "UDP port")};
   inline void initPublishers(bool image, bool scan, bool echo);
 
   // image params
