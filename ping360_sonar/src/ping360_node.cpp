@@ -67,10 +67,7 @@ Ping360Sonar::IntParams Ping360Sonar::updatedParams(const std::vector<rclcpp::Pa
     if(type == ParamType::PARAMETER_INTEGER)
     {
       for(auto &param: params)
-      {
-        param.get_value<double>();
         mapping[param.get_name()] = param.as_int();
-      }
     }
     else if(type == ParamType::PARAMETER_DOUBLE)
     {
